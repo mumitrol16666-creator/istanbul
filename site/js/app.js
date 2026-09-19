@@ -363,10 +363,78 @@
     $('.sheet__panel').focus();
   }
   function closeCart() {
+    endEditing();
     $('[data-sheet]').hidden = true;
     document.body.classList.remove('is-locked');
     $('#page').inert = false;
     if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+
+  // На мобильных клавиатура уменьшает visualViewport, но не всегда fixed-контейнер.
+  function fitKeyboardViewport() {
+    const sheet = $('[data-sheet]');
+    const viewport = window.visualViewport;
+    sheet.style.setProperty('--visible-height', (viewport ? viewport.height : window.innerHeight) + 'px');
+    sheet.style.setProperty('--visible-top', (viewport ? viewport.offsetTop : 0) + 'px');
+  }
+
+  function endEditing() {
+    const active = document.activeElement;
+    if (active && form.contains(active)) active.blur();
+    $('[data-sheet]').classList.remove('is-editing');
+    $('[data-dismiss-keyboard]').hidden = true;
+  }
+
+  function revealCheckoutField(field) {
+    const scroll = $('[data-sheet-scroll]');
+    const area = scroll.getBoundingClientRect();
+    const bounds = field.getBoundingClientRect();
+    if (bounds.bottom > area.bottom - 12) scroll.scrollTop += bounds.bottom - area.bottom + 12;
+    else if (bounds.top < area.top + 12) scroll.scrollTop -= area.top + 12 - bounds.top;
+  }
+
+  function initKeyboard() {
+    const sheet = $('[data-sheet]');
+    const done = $('[data-dismiss-keyboard]');
+    form.addEventListener('focusin', event => {
+      if (!window.matchMedia('(max-width: 899px)').matches ||
+          !event.target.matches('textarea, input:not([type="radio"]):not([type="checkbox"])')) return;
+      sheet.classList.add('is-editing');
+      done.hidden = false;
+      fitKeyboardViewport();
+      requestAnimationFrame(() => revealCheckoutField(event.target));
+    });
+    // Сохраняем фокус до click, чтобы кнопка не сдвинулась из-под пальца.
+    done.addEventListener('pointerdown', event => event.preventDefault());
+    done.addEventListener('click', () => {
+      endEditing();
+      $('.sheet__panel').focus({ preventScroll: true });
+    });
+    form.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && event.target.matches('input:not([type="radio"])')) {
+        event.preventDefault();
+        endEditing();
+        $('.sheet__panel').focus({ preventScroll: true });
+      }
+    });
+    let frame;
+    const resize = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (!sheet.classList.contains('is-editing')) return;
+        fitKeyboardViewport();
+        // Дожидаемся перерасчёта высоты скролл-области после появления клавиатуры.
+        requestAnimationFrame(() => {
+          const active = document.activeElement;
+          if (sheet.classList.contains('is-editing') && form.contains(active)) revealCheckoutField(active);
+        });
+      });
+    };
+    window.addEventListener('resize', resize);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', resize);
+      window.visualViewport.addEventListener('scroll', resize);
+    }
   }
 
   function copyOrder() {
@@ -418,7 +486,7 @@
         return;
       }
       syncForm();
-      setTimeout(() => { view = 'done'; renderCart(false); $('[data-sheet-scroll]').scrollTop = 0; }, 700);
+      setTimeout(() => { endEditing(); view = 'done'; renderCart(false); $('[data-sheet-scroll]').scrollTop = 0; }, 700);
     });
 
     $$('[data-open-cart]').forEach(b => b.addEventListener('click', openCart));
@@ -578,6 +646,7 @@
   applyConfig();
   renderMenu();
   initCheckout();
+  initKeyboard();
   renderReviews();
   initGallery();
   renderStatus();

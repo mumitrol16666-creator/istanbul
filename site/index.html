@@ -7,7 +7,7 @@
   <meta name="description" content="Кафе Istanbul Doner в Хромтау: сочный донер в лаваше и батоне, комбо, фри и наггетсы. Соберите заказ на сайте и отправьте его в WhatsApp за минуту. Доставка и навынос, ежедневно 10:00–24:00.">
   <meta name="theme-color" content="#141a4a">
   <meta name="format-detection" content="telephone=no">
-  <script src="js/i18n.js"></script>
+  <script src="js/i18n.js?v=20260920-2"></script>
 
   <meta property="og:type" content="website">
   <meta property="og:locale" content="ru_KZ">
@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=20260920-2">
 
   <script type="application/ld+json">
   {
@@ -228,6 +228,7 @@
     <div class="sheet__head">
       <h2 id="sheet-title">Ваш заказ</h2>
       <button class="round round--plain" type="button" data-close-cart aria-label="Закрыть корзину"><svg class="ic"><use href="#i-close"/></svg></button>
+      <button class="keyboard-done" type="button" data-dismiss-keyboard hidden>Готово · скрыть клавиатуру</button>
     </div>
 
     <div class="sheet__scroll" data-sheet-scroll>
@@ -280,7 +281,7 @@
           </div>
           <div class="field">
             <label for="f-phone">Телефон <i>— необязательно</i></label>
-            <input id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+7 7__ ___ __ __" aria-describedby="f-phone-hint">
+            <input id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" enterkeyhint="done" placeholder="+7 7__ ___ __ __" aria-describedby="f-phone-hint">
             <p class="hint" id="f-phone-hint">Если звонить не на номер из WhatsApp</p>
           </div>
         </div>
@@ -333,6 +334,6 @@
 
 <script src="js/config.js"></script>
 <script src="js/reviews.js"></script>
-<script src="js/app.js"></script>
+<script src="js/app.js?v=20260920-2"></script>
 </body>
 </html>
