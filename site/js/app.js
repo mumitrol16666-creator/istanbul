@@ -499,7 +499,7 @@
       form.elements.comment.value = '';
       commit(false);
       closeCart();
-      toast('Корзина очищена — можно собрать новый заказ');
+      toast('Корзина очищена — можно оформить новый заказ');
     });
   }
 
