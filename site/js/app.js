@@ -112,7 +112,7 @@
     ]);
   }
 
-  function renderDoner(item) {
+  function renderDoner(item, headingId) {
     const state = { sel: {}, addons: new Set(), qty: 1 };
     item.groups.forEach(g => { state.sel[g.id] = g.options[0].id; });
 
@@ -160,7 +160,7 @@
     const card = el('article', { class: 'doner' }, [
       el('div', { class: 'doner__img' }, [el('img', { src: item.image, alt: item.imageAlt || item.name, loading: 'lazy', width: 1300, height: 1947 })]),
       el('div', { class: 'doner__body' }, [
-        el('div', { class: 'doner__title' }, [el('h4', { text: item.name }), el('span', { text: t('от {price}', { price: money(min) }) })]),
+        el('div', { class: 'doner__title' }, [el(headingId ? 'h3' : 'h4', { text: item.name, id: headingId }), el('span', { text: t('от {price}', { price: money(min) }) })]),
         item.desc ? el('p', { class: 'doner__desc', text: item.desc }) : null
       ].concat(groups, [addons, el('div', { class: 'doner__buy' }, [qtyBox, buy])]))
     ]);
@@ -209,13 +209,14 @@
       cats.appendChild(el('a', { href: '#cat-' + cat.id, text: cat.title, 'data-cat': cat.id }));
       const configurable = cat.items.filter(i => i.type === 'configurable');
       const simple = cat.items.filter(i => i.type !== 'configurable');
+      const sharedHeading = cat.items.length === 1 && configurable.length === 1 && configurable[0].name === cat.title && !cat.note;
       const cardsClass = 'cards' + (simple.some(i => i.includes) ? ' cards--combo' : ' cards--snacks');
       menu.appendChild(el('section', { class: 'cat', id: 'cat-' + cat.id, 'aria-labelledby': 'cat-h-' + cat.id }, [
-        el('div', { class: 'cat__head' }, [
+        sharedHeading ? null : el('div', { class: 'cat__head' }, [
           el('h3', { text: cat.title, id: 'cat-h-' + cat.id }),
           cat.note ? el('span', { class: 'cat__note', text: cat.note }) : null
         ])
-      ].concat(configurable.map(renderDoner), simple.length ? [el('div', { class: cardsClass }, simple.map(renderItem))] : [])));
+      ].concat(configurable.map(item => renderDoner(item, sharedHeading ? 'cat-h-' + cat.id : null)), simple.length ? [el('div', { class: cardsClass }, simple.map(renderItem))] : [])));
     });
     $('[data-menu-hint]').textContent = CFG.menuHint || '';
     $('[data-menu-hint]').hidden = !CFG.menuHint;
