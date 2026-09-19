@@ -2,7 +2,9 @@
 (function () {
   'use strict';
 
-  const CFG = window.ISTANBUL;
+  const { t, language, localize } = window.ISTANBUL_I18N;
+  window.ISTANBUL_I18N.init();
+  const CFG = localize(window.ISTANBUL);
   const REV = window.ISTANBUL_REVIEWS || { summary: null, items: [] };
 
   const $ = (sel, root) => (root || document).querySelector(sel);
@@ -14,11 +16,11 @@
     const node = document.createElement(tag);
     Object.entries(attrs || {}).forEach(([k, v]) => {
       if (v == null || v === false) return;
-      if (k === 'text') node.textContent = v;
+      if (k === 'text') node.textContent = t(v);
       else if (k === 'html') node.innerHTML = v;
       else if (k === 'class') node.className = v;
       else if (k.startsWith('on')) node.addEventListener(k.slice(2), v);
-      else node.setAttribute(k, v === true ? '' : v);
+      else node.setAttribute(k, v === true ? '' : ['aria-label', 'alt', 'title'].includes(k) ? t(v) : v);
     });
     (children || []).forEach(c => c && node.appendChild(c));
     return node;
@@ -29,7 +31,7 @@
   const moneyText = n => group3(n, ' ') + ' ' + CFG.currency;            // для сообщения
   const plural = (n, forms) => {
     const a = Math.abs(n) % 100, b = a % 10;
-    return forms[a > 10 && a < 20 ? 2 : b === 1 ? 0 : b > 1 && b < 5 ? 1 : 2];
+    return t(forms[a > 10 && a < 20 ? 2 : b === 1 ? 0 : b > 1 && b < 5 ? 1 : 2]);
   };
 
   const store = {
@@ -119,7 +121,7 @@
     const unit = () => item.prices[item.groups.map(g => state.sel[g.id]).join('/')] +
       (item.addons || []).filter(a => state.addons.has(a.id)).reduce((s, a) => s + a.price, 0);
     const refresh = () => {
-      buy.textContent = 'В корзину · ' + money(unit() * state.qty);
+      buy.textContent = t('В корзину · ') + money(unit() * state.qty);
       qtyBox.replaceChildren(el('span', { text: 'Количество' }),
         stepper(state.qty, q => { state.qty = Math.max(1, Math.min(20, q)); refresh(); }, 'Сколько донеров'));
     };
@@ -131,7 +133,7 @@
           const input = el('input', { type: 'radio', name: item.id + '-' + g.id, value: o.id, checked: i === 0,
             onchange: () => { state.sel[g.id] = o.id; refresh(); } });
           return el('label', {}, [input, el('span', {}, [
-            document.createTextNode(o.name), o.kz && o.kz !== o.name.toLowerCase() ? el('small', { text: o.kz, lang: 'kk' }) : null
+            document.createTextNode(o.name)
           ])]);
         }))
     ]));
@@ -149,7 +151,7 @@
     buy.addEventListener('click', () => {
       const line = { id: item.id, sel: Object.assign({}, state.sel), addons: Array.from(state.addons) };
       addToCart(line, state.qty);
-      toast('В корзине: ' + resolve(Object.assign({ qty: 1 }, line)).title);
+      toast(t('В корзине: ') + resolve(Object.assign({ qty: 1 }, line)).title);
       state.qty = 1;
       refresh();
     });
@@ -158,7 +160,7 @@
     const card = el('article', { class: 'doner' }, [
       el('div', { class: 'doner__img' }, [el('img', { src: item.image, alt: item.imageAlt || item.name, loading: 'lazy', width: 1300, height: 1947 })]),
       el('div', { class: 'doner__body' }, [
-        el('div', { class: 'doner__title' }, [el('h4', { text: item.name }), el('span', { text: 'от ' + money(min) })]),
+        el('div', { class: 'doner__title' }, [el('h4', { text: item.name }), el('span', { text: t('от {price}', { price: money(min) }) })]),
         item.desc ? el('p', { class: 'doner__desc', text: item.desc }) : null
       ].concat(groups, [addons, el('div', { class: 'doner__buy' }, [qtyBox, buy])]))
     ]);
@@ -195,9 +197,9 @@
       const qty = qtyOf(id);
       const item = ITEMS[id];
       actionSlots[id].replaceChildren(qty > 0
-        ? stepper(qty, q => setQty(id, q), item.name + ': количество')
-        : el('button', { type: 'button', class: 'btn btn--red add', html: icon('plus') + 'Добавить', 'aria-label': 'Добавить: ' + item.name,
-          onclick: () => { addToCart({ id }, 1); toast('В корзине: ' + item.name); } }));
+        ? stepper(qty, q => setQty(id, q), item.name + t(': количество'))
+        : el('button', { type: 'button', class: 'btn btn--red add', html: icon('plus') + t('Добавить'), 'aria-label': t('Добавить: ') + item.name,
+          onclick: () => { addToCart({ id }, 1); toast(t('В корзине: ') + item.name); } }));
     });
   }
 
@@ -245,14 +247,13 @@
     const open = isOpen();
     $$('[data-status]').forEach(node => {
       node.hidden = false;
-      node.textContent = open ? 'Открыто до ' + hh(CFG.hours.close) : 'Закрыто · откроемся в ' + hh(CFG.hours.open);
+      node.textContent = open ? t('Открыто до {time}', { time: hh(CFG.hours.close) }) : t('Закрыто · откроемся в {time}', { time: hh(CFG.hours.open) });
       node.classList.toggle('is-open', open);
       node.classList.toggle('is-closed', !open);
     });
     const note = $('[data-closed-note]');
     note.hidden = open;
-    note.textContent = 'Сейчас мы закрыты — работаем ' + hh(CFG.hours.open) + '–' + hh(CFG.hours.close) +
-      ' по времени Хромтау. Заказ можно отправить уже сейчас, ответим после открытия.';
+    note.textContent = t('Сейчас мы закрыты — работаем {open}–{close} по времени Хромтау. Заказ можно отправить уже сейчас, ответим после открытия.', { open: hh(CFG.hours.open), close: hh(CFG.hours.close) });
   }
 
   // ───────────────────── оформление и сообщение в WhatsApp ─────────────────────
@@ -271,19 +272,19 @@
 
   function buildMessage() {
     const d = formData(), delivery = d.mode === 'delivery', out = [];
-    out.push('*Новый заказ с сайта — ' + CFG.brand.name + '*', '');
+    out.push('*' + t('Новый заказ с сайта — ') + CFG.brand.name + '*', '');
     lines().forEach((l, i) => {
       out.push((i + 1) + '. ' + l.title + (l.opts ? ' (' + l.opts + ')' : ''));
       out.push('   ' + l.qty + ' × ' + moneyText(l.unit) + ' = ' + moneyText(l.sum));
     });
-    out.push('', '*Итого: ' + moneyText(cartTotal()) + '*' + (delivery ? ' (без учёта доставки)' : ''), '');
-    out.push('Получение: ' + (delivery ? 'доставка' : 'самовывоз'));
-    if (delivery) out.push('Адрес: ' + d.address);
-    out.push('Когда: ' + (d.when === 'time' && d.time ? 'к ' + d.time : 'как можно скорее'));
-    if (d.payment) out.push('Оплата: ' + d.payment);
-    out.push('Имя: ' + d.name);
-    if (d.phone) out.push('Телефон: ' + d.phone);
-    if (d.comment) out.push('Комментарий: ' + d.comment);
+    out.push('', '*' + t('Итого: ') + moneyText(cartTotal()) + '*' + (delivery ? t(' (без учёта доставки)') : ''), '');
+    out.push(t('Получение: ') + t(delivery ? 'доставка' : 'самовывоз'));
+    if (delivery) out.push(t('Адрес: ') + d.address);
+    out.push(t('Когда: ') + (d.when === 'time' && d.time ? t('к {time}', { time: d.time }) : t('как можно скорее')));
+    if (d.payment) out.push(t('Оплата: ') + t(d.payment));
+    out.push(t('Имя: ') + d.name);
+    if (d.phone) out.push(t('Телефон: ') + d.phone);
+    if (d.comment) out.push(t('Комментарий: ') + d.comment);
     return out.join('\n');
   }
 
@@ -320,12 +321,12 @@
       el('div', {}, [
         el('div', { class: 'line__name', text: l.title }),
         l.opts ? el('div', { class: 'line__opts', text: l.opts }) : null,
-        el('div', { class: 'line__unit', text: money(l.unit) + ' за шт.' })
+        el('div', { class: 'line__unit', text: money(l.unit) + t(' за шт.') })
       ]),
       el('div', { class: 'line__sum', text: money(l.sum) }),
       el('div', { class: 'line__ctrl' }, [
-        stepper(l.qty, q => setQty(l.key, q), l.title + ': количество'),
-        el('button', { type: 'button', class: 'line__del', html: icon('trash') + 'Убрать', 'aria-label': 'Убрать: ' + l.title, onclick: () => setQty(l.key, 0) })
+        stepper(l.qty, q => setQty(l.key, q), l.title + t(': количество')),
+        el('button', { type: 'button', class: 'line__del', html: icon('trash') + t('Убрать'), 'aria-label': t('Убрать: ') + l.title, onclick: () => setQty(l.key, 0) })
       ])
     ])));
   }
@@ -388,6 +389,14 @@
       el('label', {}, [el('input', { type: 'radio', name: 'payment', value: p, checked: saved.payment ? saved.payment === p : i === 0 }), el('span', { text: p })])));
     if (saved.mode) form.elements.mode.value = saved.mode;
     ['address', 'name', 'phone'].forEach(k => { if (saved[k]) form.elements[k].value = saved[k]; });
+    try {
+      const draft = JSON.parse(sessionStorage.getItem('istanbul.languageDraft') || 'null');
+      if (draft) Object.entries(draft).forEach(([key, value]) => {
+        const field = form.elements.namedItem(key);
+        if (field) field.value = value;
+      });
+      sessionStorage.removeItem('istanbul.languageDraft');
+    } catch (e) { /* storage unavailable */ }
 
     form.addEventListener('input', syncForm);
     form.addEventListener('change', syncForm);
@@ -433,11 +442,19 @@
     return s || '★';
   }
   function stars(n) {
-    const box = el('span', { class: 'stars', role: 'img', 'aria-label': 'Оценка ' + n + ' из 5' });
+    const box = el('span', { class: 'stars', role: 'img', 'aria-label': t('Оценка {n} из 5', { n }) });
     for (let i = 1; i <= 5; i++) box.insertAdjacentHTML('beforeend', '<svg class="ic' + (i > n ? ' off' : '') + '" aria-hidden="true"><use href="#i-star"/></svg>');
     return box;
   }
-  const dateRu = iso => new Date(iso + 'T12:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+  function reviewDate(iso) {
+    // В некоторых браузерах kk-KZ выводит «M03» вместо названия месяца.
+    if (language === 'kk') {
+      const [year, month, day] = iso.split('-').map(Number);
+      const months = ['қаңтар', 'ақпан', 'наурыз', 'сәуір', 'мамыр', 'маусым', 'шілде', 'тамыз', 'қыркүйек', 'қазан', 'қараша', 'желтоқсан'];
+      return day + ' ' + months[month - 1] + ' ' + year;
+    }
+    return new Date(iso + 'T12:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
 
   function renderReviews() {
     const s = REV.summary, box = $('[data-rating-box]'), track = $('[data-reviews]');
@@ -449,14 +466,14 @@
         el('div', { class: 'rating__top' }, [
           el('div', { class: 'rating__num', text: s.rating.toFixed(1) }),
           el('div', {}, [stars(Math.round(s.rating)), el('div', { class: 'rating__sub',
-            text: s.ratings_count + ' ' + plural(s.ratings_count, ['оценка', 'оценки', 'оценок']) + ' · ' + s.reviews_count + ' ' + plural(s.reviews_count, ['отзыв', 'отзыва', 'отзывов']) + ' в 2ГИС' })])
+            text: s.ratings_count + ' ' + plural(s.ratings_count, ['оценка', 'оценки', 'оценок']) + ' · ' + s.reviews_count + ' ' + plural(s.reviews_count, ['отзыв', 'отзыва', 'отзывов']) + t(' в 2ГИС') })])
         ]),
         el('div', { class: 'bars' }, [5, 4, 3, 2, 1].map(n => el('div', { class: 'bar' }, [
           el('span', { text: String(n) }),
           el('i', {}, [el('b', { style: 'width:' + Math.round((dist[n] || 0) / max * 100) + '%' })]),
           el('span', { text: String(dist[n] || 0) })
         ]))),
-        el('p', { class: 'bars__note', text: 'Распределение — по ' + s.confirmed_reviews + ' подтверждённым отзывам.' }),
+        el('p', { class: 'bars__note', text: t('Распределение — по {n} подтверждённым отзывам.', { n: s.confirmed_reviews }) }),
         s.topics && s.topics.length ? el('p', { class: 'topics__t', text: 'Чаще всего хвалят:' }) : null,
         s.topics && s.topics.length ? el('div', { class: 'topics' }, s.topics.map(t => el('span', { text: t }))) : null
       );
@@ -468,14 +485,14 @@
       if (long) text.classList.add('is-clamped');
       const more = long ? el('button', { type: 'button', class: 'rev__more', text: 'Читать полностью', onclick: () => {
         const clamped = text.classList.toggle('is-clamped');
-        more.textContent = clamped ? 'Читать полностью' : 'Свернуть';
+        more.textContent = t(clamped ? 'Читать полностью' : 'Свернуть');
       } }) : null;
-      const tag = r.visits >= 3 ? 'Частый гость · ' + r.visits + ' ' + plural(r.visits, ['посещение', 'посещения', 'посещений'])
+      const tag = r.visits >= 3 ? t('Частый гость · ') + r.visits + ' ' + plural(r.visits, ['посещение', 'посещения', 'посещений'])
         : r.visits ? 'Посещение подтверждено 2ГИС' : '';
       track.appendChild(el('article', { class: 'rev' }, [
         el('div', { class: 'rev__head' }, [
           el('div', { class: 'rev__ava', text: initials(r.author), style: 'background:' + AVA[i % AVA.length], 'aria-hidden': 'true' }),
-          el('div', {}, [el('div', { class: 'rev__name', text: r.author }), el('div', { class: 'rev__meta', text: dateRu(r.date) })])
+          el('div', {}, [el('div', { class: 'rev__name', text: r.author }), el('div', { class: 'rev__meta', text: reviewDate(r.date) })])
         ]),
         stars(r.rating), text, more,
         tag ? el('span', { class: 'rev__tag', text: tag }) : null
@@ -503,11 +520,11 @@
       index = (i + CFG.gallery.length) % CFG.gallery.length;
       const g = CFG.gallery[index];
       img.src = g.src; img.alt = g.alt;
-      cap.textContent = g.alt + ' · фото гостей, 2ГИС';
+      cap.textContent = g.alt + t(' · фото гостей, 2ГИС');
     };
     const close = () => { box.hidden = true; document.body.classList.remove('is-locked'); $('#page').inert = false; if (opener) opener.focus(); };
     CFG.gallery.forEach((g, i) => grid.appendChild(el('button', {
-      type: 'button', class: g.shape ? 'is-' + g.shape : '', 'aria-label': 'Открыть фото: ' + g.alt,
+      type: 'button', class: g.shape ? 'is-' + g.shape : '', 'aria-label': t('Открыть фото: ') + g.alt,
       onclick: e => { opener = e.currentTarget; show(i); box.hidden = false; document.body.classList.add('is-locked'); $('#page').inert = true; $('[data-lb-close]').focus(); }
     }, [el('img', { src: g.thumb, alt: g.alt, loading: 'lazy' })])));
     $('[data-lb-close]').addEventListener('click', close);
@@ -551,7 +568,7 @@
   let toastTimer;
   function toast(text) {
     const t = $('[data-toast]');
-    t.textContent = text;
+    t.textContent = window.ISTANBUL_I18N.t(text);
     t.classList.add('is-on');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => t.classList.remove('is-on'), 2200);
