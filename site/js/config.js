@@ -32,8 +32,8 @@ window.ISTANBUL = {
   contacts: {
     whatsapp: '77782508349',              // номер, на который уходит заказ (только цифры, с кодом страны)
     whatsappDisplay: '+7 778 250 83 49',     // как показывать этот номер на сайте
-    phone: '+77078909669',
-    phoneDisplay: '+7 707 890 96 69',
+    phone: '+77782508349',
+    phoneDisplay: '+7 778 250 83 49',
     instagram: 'istanbul_cafe_hromtau',
     address: 'ул. Есет батыра, 4Б',
     city: 'Хромтау, Актюбинская область',
