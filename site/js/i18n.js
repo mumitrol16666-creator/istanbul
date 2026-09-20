@@ -155,6 +155,11 @@
     'Выбрать →': 'Таңдау →',
     'О кафе': 'Кафе туралы',
     'На главную': 'Басты бетке',
+    // политика конфиденциальности
+    'Политика конфиденциальности': 'Құпиялылық саясаты',
+    'политика конфиденциальности': 'құпиялылық саясаты',
+    'Отправляя заказ, вы принимаете условия:': 'Тапсырысты жібере отырып, мына шарттарды қабылдайсыз:',
+    'БИН/ИИН': 'БСН/ЖСН',
     // скидка дня
     'Скидка дня': 'Күн жеңілдігі',
     'Заказать со скидкой': 'Жеңілдікпен тапсырыс беру',
@@ -283,11 +288,14 @@
     });
     document.querySelectorAll('a[data-page-link]').forEach(link => { link.href = pageUrl(link.getAttribute('href')); });
     if (language === 'kk') {
-      const menuPage = document.documentElement.dataset.page === 'menu';
-      document.title = menuPage ? 'Мәзір және тапсырыс — Istanbul Doner, Хромтау' : 'Istanbul Doner — Хромтауда донер мен комбо жеткізу';
-      const description = menuPage
-        ? 'Хромтаудағы Istanbul Doner мәзірі: донер, комбо, тіскебасарлар, сусындар мен тұздықтар — бағаларымен. Тағамдарды таңдап, тапсырысты WhatsApp арқылы жіберіңіз. Күн сайын 10:00–24:00.'
-        : 'Хромтаудағы Istanbul Doner: донер, комбо, фри және наггетстер. Тапсырысты сайтта жинап, WhatsApp арқылы жіберіңіз. Күн сайын 10:00–24:00.';
+      // заголовок и описание страницы на казахском — по атрибуту data-page у <html>
+      const meta = {
+        menu: ['Мәзір және тапсырыс — Istanbul Doner, Хромтау', 'Хромтаудағы Istanbul Doner мәзірі: донер, комбо, тіскебасарлар, сусындар мен тұздықтар — бағаларымен. Тағамдарды таңдап, тапсырысты WhatsApp арқылы жіберіңіз. Күн сайын 10:00–24:00.'],
+        privacy: ['Құпиялылық саясаты — Istanbul Doner', 'Istanbul Doner сайты деректермен қалай жұмыс істейді: тапсырысты кафеге WhatsApp арқылы өзіңіз жібересіз, сайт серверге ештеңе жібермейді.'],
+        home: ['Istanbul Doner — Хромтауда донер мен комбо жеткізу', 'Хромтаудағы Istanbul Doner: донер, комбо, фри және наггетстер. Тапсырысты сайтта жинап, WhatsApp арқылы жіберіңіз. Күн сайын 10:00–24:00.']
+      };
+      const [title, description] = meta[document.documentElement.dataset.page] || meta.home;
+      document.title = title;
       document.querySelector('meta[name="description"]').content = description;
       document.querySelector('meta[property="og:title"]').content = document.title;
       document.querySelector('meta[property="og:description"]').content = description;
