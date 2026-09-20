@@ -438,6 +438,9 @@ h2 { font: 800 clamp(26px, 5.4vw, 40px)/1.1 var(--display); letter-spacing: -.02
 .line__ask .chip { background: #fff; box-shadow: inset 0 0 0 1.5px #ead9ae; }
 .line__ask .chip:hover { box-shadow: inset 0 0 0 2px var(--red); }
 .line__ctrl { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; }
+.line__addons { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; padding-block: 4px; }
+.line__addons-title { width: 100%; font-size: 13px; color: var(--muted); }
+.line__addons .line__addon { min-height: 44px; white-space: normal; text-align: left; color: var(--red-dark); background: var(--cream, #fff8ef); }
 
 /* «Добавить к заказу?» в корзине */
 .cs { display: grid; gap: 10px; }

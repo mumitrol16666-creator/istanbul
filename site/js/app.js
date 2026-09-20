@@ -150,6 +150,46 @@
     renderCart(bump);
   }
 
+  function addLineAddon(key, addonId) {
+    const line = cart.find(l => lineKey(l) === key);
+    const addon = line && (ITEMS[line.id].addons || []).find(a => a.id === addonId);
+    if (!addon || (line.addons || []).includes(addonId)) return;
+    const next = Object.assign(specOf(line), { qty: line.qty });
+    next.addons.push(addonId);
+    const same = cart.find(l => l !== line && lineKey(l) === lineKey(next));
+    if (same && same.qty + next.qty > 99) {
+      toast(t('В одной позиции может быть не больше 99 порций'));
+      return;
+    }
+    if (same) {
+      same.qty += next.qty;
+      cart = cart.filter(l => l !== line);
+    } else {
+      cart[cart.indexOf(line)] = next;
+    }
+    commit(false);
+  }
+
+  function renderLineAddons(resolved) {
+    const line = cart.find(l => lineKey(l) === resolved.key);
+    const availableAddons = (ITEMS[resolved.id].addons || []).filter(a => !(line.addons || []).includes(a.id));
+    if (!availableAddons.length) return null;
+    return el('div', { class: 'line__addons' }, [
+      el('span', { class: 'line__addons-title', text: resolved.qty > 1 ? 'Добавить к каждой порции?' : 'Добавить в донер?' }),
+      ...availableAddons.map(a => {
+        const next = Object.assign(specOf(line), { qty: line.qty });
+        next.addons.push(a.id);
+        const extra = resolve(next).unit - resolved.unit;
+        return el('button', {
+          type: 'button', class: 'chip chip--sm line__addon',
+          text: '+ ' + a.name + ' · ' + money(extra) + (resolved.qty > 1 ? t(' за шт.') : ''),
+          'aria-label': t('Добавить: ') + a.name + ', ' + resolved.title + ', ' + money(extra) + t(' за шт.'),
+          onclick: () => addLineAddon(resolved.key, a.id)
+        });
+      })
+    ]);
+  }
+
   // ─────────────────────── предложения к покупке ───────────────────────
   // «Уже есть»: само блюдо, любая позиция из «одиночной» категории (напитки, соусы) или комбо, куда оно входит
   function covered(id) {
@@ -507,6 +547,7 @@
         ])
       ]),
       el('div', { class: 'line__sum', text: money(l.sum) }),
+      renderLineAddons(l),
       // вопрос без ответа (соус к фри) — спрашиваем прямо в строке
       l.pending.length ? el('div', { class: 'line__ask' }, [el('span', { text: l.pending[0].short || l.pending[0].title + ':' })].concat(
         l.pending[0].options.map(o => el('button', { type: 'button', class: 'chip chip--sm' + (o.id === 'none' ? ' chip--muted' : ''), text: o.name,
