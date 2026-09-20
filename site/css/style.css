@@ -511,6 +511,77 @@ h2 { font: 800 clamp(26px, 5.4vw, 40px)/1.1 var(--display); letter-spacing: -.02
   .doner__qty .stepper output { min-width: 26px; }
   .doner__buy .btn { min-height: 48px; padding: 8px; font-size: 14px; white-space: normal; text-align: center; }
 }
+/* ── скидка дня: флажки и цены ── */
+.flag { display: inline-block; font-size: 12px; font-weight: 700; line-height: 1.3; color: #fff; background: var(--red); padding: 3px 9px; border-radius: 999px; white-space: nowrap; vertical-align: middle; }
+.flag--sm { font-size: 11px; padding: 2px 8px; margin-left: 8px; }
+.card__name .flag { margin-left: 8px; }
+.badge + .flag { margin-left: 6px; margin-bottom: 4px; }
+.doner__title .flag { margin-right: auto; align-self: center; }
+.price-old { margin-right: 8px; color: var(--muted); font-size: .82em; font-weight: 500; text-decoration-thickness: 1.5px; }
+.line__unit { display: flex; flex-wrap: wrap; align-items: center; }
+.savings { margin: 0 0 8px; text-align: right; font-size: 14px; font-weight: 700; color: #14713d; }
+.is-spot { animation: spot 2.4s ease 1; }
+@keyframes spot { 0%, 55% { box-shadow: 0 0 0 4px var(--yellow), 0 0 0 14px rgba(255, 198, 41, .35); } }
+
+/* ── главная: карточка «Скидка дня» ── */
+.section--deal { padding-bottom: 0; }
+.deal {
+  display: grid; border-radius: 28px; overflow: hidden; color: #fff; box-shadow: var(--shadow-lg);
+  background: radial-gradient(620px 320px at 100% 0%, rgba(255, 198, 41, .28), transparent 62%), linear-gradient(135deg, var(--red) 0%, #8f1015 100%);
+}
+.deal__media { aspect-ratio: 16 / 10; background: #7a0f13; }
+.deal__media img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 64%; }
+.deal__body { display: grid; gap: 12px; justify-items: start; padding: 24px 20px 26px; }
+.deal__badge { background: var(--yellow); color: var(--ink); font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; padding: 6px 14px; border-radius: 999px; }
+.deal h2 { color: #fff; font-size: clamp(24px, 4.6vw, 38px); text-wrap: balance; }
+.deal__text { color: rgba(255, 255, 255, .9); max-width: 34em; }
+.deal__price { display: flex; align-items: baseline; gap: 12px; }
+.deal__price s { font-size: 18px; opacity: .72; }
+.deal__price b { font: 800 clamp(30px, 6vw, 44px)/1 var(--display); color: var(--yellow); }
+.deal__cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin-top: 6px; }
+.deal__until { font-size: 14px; color: rgba(255, 255, 255, .88); }
+
+/* ── главная: плитки «Что в меню» ── */
+.section__head--row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.tile {
+  position: relative; display: grid; gap: 4px; align-content: start; padding: 18px 16px; border-radius: var(--radius);
+  background: var(--paper); box-shadow: var(--shadow); text-decoration: none; transition: transform .15s ease, box-shadow .15s ease;
+}
+.tile:hover { transform: translateY(-3px); box-shadow: 0 16px 36px rgba(20, 26, 74, .15); }
+.tile__e { font-size: 34px; line-height: 1.15; }
+.tile__t { font: 700 17px/1.2 var(--display); overflow-wrap: anywhere; }
+.tile__p { color: var(--muted); font-size: 14px; font-weight: 600; }
+.tile .flag { justify-self: start; margin-top: 4px; }
+
+/* ── страница заказа ── */
+.section--order { padding-top: 24px; }
+.backlink { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 14px; color: var(--muted); font-size: 15px; font-weight: 600; text-decoration: none; }
+.backlink:hover { color: var(--ink); }
+.backlink .ic { width: 16px; height: 16px; }
+.h-page { margin: 0; font: 800 clamp(28px, 6vw, 44px)/1.1 var(--display); letter-spacing: -.02em; }
+.dealbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 14px; padding: 12px 16px; border-radius: 18px;
+  background: linear-gradient(135deg, var(--red), #a3141a); color: #fff; font-weight: 600; text-decoration: none; box-shadow: var(--shadow);
+}
+.dealbar__badge { background: var(--yellow); color: var(--ink); font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; }
+.dealbar__go { margin-left: auto; font-size: 14px; opacity: .9; }
+a.top__cart, a.cartbar { text-decoration: none; }
+
+@media (min-width: 560px) {
+  .tiles { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 900px) {
+  .deal { grid-template-columns: 1fr 1.15fr; }
+  .deal__media { position: relative; aspect-ratio: auto; min-height: 340px; }
+  .deal__media img { position: absolute; inset: 0; }
+  .deal__body { align-content: center; padding: 40px 44px; }
+  .tiles { grid-template-columns: repeat(5, 1fr); gap: 16px; }
+  .tile { padding: 24px 20px; }
+  .tile .flag { position: absolute; top: 14px; right: 14px; margin: 0; }
+  .section--order { padding-top: 34px; }
+}
+
 /* ── планшет и десктоп ── */
 @media (min-width: 560px) {
   .card__ctrl { grid-template-columns: 1fr; }

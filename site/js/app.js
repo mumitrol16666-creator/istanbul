@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  const { t, language, localize } = window.ISTANBUL_I18N;
+  const { t, language, localize, pageUrl } = window.ISTANBUL_I18N;
   window.ISTANBUL_I18N.init();
   const CFG = localize(window.ISTANBUL);
   const REV = window.ISTANBUL_REVIEWS || { summary: null, items: [] };
@@ -47,6 +47,17 @@
   CATS.forEach(c => c.items.forEach(i => { ITEMS[i.id] = i; CAT_OF[i.id] = c.id; }));
   const groupsOf = item => (item && item.groups) || [];
 
+  // ─────────────────────────── скидка дня ───────────────────────────
+  // Первая акция из config.deals, которая действует сегодня по времени кафе
+  const DEAL = (function () {
+    const now = cafeNow(), weekday = now.getDay() || 7;
+    const today = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
+    return (CFG.deals || []).find(d => d.active !== false && d.percent > 0 && (d.items || []).some(id => ITEMS[id]) &&
+      (!(d.days || []).length || d.days.includes(weekday)) && (!d.from || today >= d.from) && (!d.until || today <= d.until)) || null;
+  })();
+  const dealPrice = (itemId, price) => (DEAL && DEAL.items.includes(itemId) ? Math.round(price * (100 - DEAL.percent) / 1000) * 10 : price);
+  const dealTag = () => t('Скидка дня') + ' −' + DEAL.percent + '%';
+
   // ───────────────────────────── корзина ─────────────────────────────
   // строка корзины: { id, sel: {groupId: optionId}, addons: [id], qty } — названия и цены всегда берём из config.js
   let cart = store.get('istanbul.cart.v1', []);
@@ -74,6 +85,8 @@
     }
     const addons = (line.addons || []).map(id => (item.addons || []).find(a => a.id === id)).filter(Boolean);
     unit += addons.reduce((s, a) => s + a.price, 0);
+    const full = unit;
+    unit = dealPrice(item.id, full);
     const main = picks.filter(p => !p.g.optional).map(p => p.o.line);
     const extra = picks.filter(p => p.g.optional && p.o).map(p => p.o.line).concat(addons.map(a => '+ ' + a.line));
     return {
@@ -81,7 +94,7 @@
       title: item.name + (main.length ? ' ' + main.join(', ') : ''),
       opts: extra.join(', '),
       pending: picks.filter(p => p.g.optional && !p.o).map(p => p.g),
-      unit, qty, sum: unit * qty
+      unit, full, deal: unit !== full, qty, sum: unit * qty
     };
   }
 
@@ -89,6 +102,7 @@
   const lines = () => cart.map(resolve).filter(Boolean);
   const cartCount = () => lines().reduce((s, l) => s + l.qty, 0);
   const cartTotal = () => lines().reduce((s, l) => s + l.sum, 0);
+  const cartSavings = () => lines().reduce((s, l) => s + (l.full - l.unit) * l.qty, 0);
   const qtyOf = id => cart.filter(l => l.id === id).reduce((s, l) => s + l.qty, 0);
   const specOf = s => ({ id: s.id, sel: Object.assign({}, s.sel), addons: (s.addons || []).slice() });
 
@@ -167,7 +181,7 @@
   }
   function hideTray() {
     clearTimeout(trayTimer);
-    $('[data-tray]').hidden = true;
+    if ($('[data-tray]')) $('[data-tray]').hidden = true;
   }
 
   // 1) вопрос по только что добавленному блюду (бесплатный соус к фри)
@@ -226,6 +240,15 @@
     ]);
   }
 
+  // цена: если действует скидка дня — старая зачёркнута
+  function fillPrice(node, r) {
+    node.replaceChildren();
+    if (r.deal) node.appendChild(el('s', { class: 'price-old', text: money(r.full) }));
+    node.appendChild(document.createTextNode(money(r.unit)));
+    return node;
+  }
+  const dealFlag = item => (DEAL && DEAL.items.includes(item.id) ? el('span', { class: 'flag', text: dealTag() }) : null);
+
   // переключатель-кнопки для группы вариантов
   function segControl(item, g, state, refresh, small) {
     return el('div', { class: 'seg seg--' + g.options.length + (small ? ' seg--sm' : ''), role: 'radiogroup', 'aria-label': item.name + ': ' + g.title.toLowerCase() },
@@ -269,11 +292,11 @@
       refresh();
     });
 
-    const min = Math.min.apply(null, Object.values(item.prices));
-    const card = el('article', { class: 'doner' }, [
+    const min = dealPrice(item.id, Math.min.apply(null, Object.values(item.prices)));
+    const card = el('article', { class: 'doner', id: 'item-' + item.id }, [
       el('div', { class: 'doner__img' }, [el('img', { src: item.image, alt: item.imageAlt || item.name, loading: 'lazy', width: 1300, height: 1947 })]),
       el('div', { class: 'doner__body' }, [
-        el('div', { class: 'doner__title' }, [el(headingId ? 'h3' : 'h4', { text: item.name, id: headingId }), el('span', { text: t('от {price}', { price: money(min) }) })]),
+        el('div', { class: 'doner__title' }, [el(headingId ? 'h3' : 'h4', { text: item.name, id: headingId }), dealFlag(item), el('span', { text: t('от {price}', { price: money(min) }) })]),
         item.desc ? el('p', { class: 'doner__desc', text: item.desc }) : null
       ].concat(groups, [addons, el('div', { class: 'doner__buy' }, [qtyBox, buy])]))
     ]);
@@ -292,7 +315,7 @@
     const count = el('span', { class: 'card__count', hidden: true });
     countBadges[item.id] = count;
     const spec = () => ({ id: item.id, sel: Object.assign({}, state.sel), addons: [] });
-    const refresh = () => { price.textContent = money(resolve(Object.assign({ qty: 1 }, spec())).unit); };
+    const refresh = () => fillPrice(price, resolve(Object.assign({ qty: 1 }, spec())));
 
     const controls = item.groups.map(g => g.style === 'select'
       ? el('select', { class: 'sel', 'aria-label': item.name + ': ' + g.title.toLowerCase(), onchange: e => { state.sel[g.id] = e.target.value; refresh(); } },
@@ -300,9 +323,9 @@
       : segControl(item, g, state, refresh, true));
 
     refresh();
-    return el('article', { class: 'card card--opt' }, [
+    return el('article', { class: 'card card--opt', id: 'item-' + item.id }, [
       el('div', { class: 'card__e card__e--tone', text: item.emoji || '🥤', 'aria-hidden': 'true', style: item.tone ? '--tone:' + item.tone : null }),
-      el('div', { class: 'card__name' }, [document.createTextNode(item.name), count]),
+      el('div', { class: 'card__name' }, [document.createTextNode(item.name), dealFlag(item), count]),
       el('div', { class: 'card__ctrl' }, controls),
       el('div', { class: 'card__foot' }, [price,
         el('button', { type: 'button', class: 'btn btn--red add', html: icon('plus') + t('Добавить'), 'aria-label': t('Добавить: ') + item.name,
@@ -314,18 +337,18 @@
     const slot = el('div', { class: 'card__act' });
     actionSlots[item.id] = slot;
     const combo = Array.isArray(item.includes);
-    const foot = el('div', { class: 'card__foot' }, [el('span', { class: 'card__price', text: money(item.price) }), slot]);
+    const foot = el('div', { class: 'card__foot' }, [fillPrice(el('span', { class: 'card__price' }), resolve({ id: item.id, qty: 1 })), slot]);
     if (!combo) {
-      return el('article', { class: 'card' }, [
+      return el('article', { class: 'card', id: 'item-' + item.id }, [
         el('div', { class: 'card__e', text: item.emoji || '🍽️', 'aria-hidden': 'true' }),
-        el('div', { class: 'card__name', text: item.name }),
+        el('div', { class: 'card__name' }, [document.createTextNode(item.name), dealFlag(item)]),
         foot
       ]);
     }
-    return el('article', { class: 'card card--combo' }, [
+    return el('article', { class: 'card card--combo', id: 'item-' + item.id }, [
       el('div', { class: 'card__top' }, [
         el('div', { class: 'card__e', text: item.emoji || '🍱', 'aria-hidden': 'true' }),
-        el('div', {}, [item.badge ? el('span', { class: 'badge', text: item.badge }) : null, el('div', { class: 'card__name', text: item.name })])
+        el('div', {}, [item.badge ? el('span', { class: 'badge', text: item.badge }) : null, dealFlag(item), el('div', { class: 'card__name', text: item.name })])
       ]),
       el('ul', { class: 'incl' }, item.includes.map(t => el('li', { html: icon('check') }, [document.createTextNode(t)]))),
       foot
@@ -404,6 +427,7 @@
       node.classList.toggle('is-closed', !open);
     });
     const note = $('[data-closed-note]');
+    if (!note) return;
     note.hidden = open;
     note.textContent = t('Сейчас мы закрыты — работаем {open}–{close} по времени Хромтау. Заказ можно отправить уже сейчас, ответим после открытия.', { open: hh(CFG.hours.open), close: hh(CFG.hours.close) });
   }
@@ -426,10 +450,13 @@
     const d = formData(), delivery = d.mode === 'delivery', out = [];
     out.push('*' + t('Новый заказ с сайта — ') + CFG.brand.name + '*', '');
     lines().forEach((l, i) => {
-      out.push((i + 1) + '. ' + l.title + (l.opts ? ' (' + l.opts + ')' : ''));
+      out.push((i + 1) + '. ' + l.title + (l.opts ? ' (' + l.opts + ')' : '') + (l.deal ? ' — ' + dealTag().toLowerCase() : ''));
       out.push('   ' + l.qty + ' × ' + moneyText(l.unit) + ' = ' + moneyText(l.sum));
     });
-    out.push('', '*' + t('Итого: ') + moneyText(cartTotal()) + '*' + (delivery ? t(' (без учёта доставки)') : ''), '');
+    const savings = cartSavings();
+    out.push('');
+    if (savings) out.push(t('Скидка дня') + ': −' + moneyText(savings));
+    out.push('*' + t('Итого: ') + moneyText(cartTotal()) + '*' + (delivery ? t(' (без учёта доставки)') : ''), '');
     out.push(t('Получение: ') + t(delivery ? 'доставка' : 'самовывоз'));
     if (delivery) out.push(t('Адрес: ') + d.address);
     out.push(t('Когда: ') + (d.when === 'time' && d.time ? t('к {time}', { time: d.time }) : t('как можно скорее')));
@@ -473,7 +500,11 @@
       el('div', {}, [
         el('div', { class: 'line__name', text: l.title }),
         l.opts ? el('div', { class: 'line__opts', text: l.opts }) : null,
-        el('div', { class: 'line__unit', text: money(l.unit) + t(' за шт.') })
+        el('div', { class: 'line__unit' }, [
+          l.deal ? el('s', { class: 'price-old', text: money(l.full) }) : null,
+          document.createTextNode(money(l.unit) + t(' за шт.')),
+          l.deal ? el('span', { class: 'flag flag--sm', text: dealTag() }) : null
+        ])
       ]),
       el('div', { class: 'line__sum', text: money(l.sum) }),
       // вопрос без ответа (соус к фри) — спрашиваем прямо в строке
@@ -508,17 +539,26 @@
   function renderCart(bump) {
     const count = cartCount(), total = cartTotal();
     const badge = $('[data-cart-count]'), bar = $('[data-cartbar]');
+    const home = bar.hasAttribute('data-cartbar-home');
     badge.hidden = count === 0;
     badge.textContent = count;
-    bar.hidden = count === 0;
-    document.body.classList.toggle('has-cart', count > 0);
-    $('[data-cartbar-count]').textContent = count + ' ' + plural(count, ['позиция', 'позиции', 'позиций']);
-    $('[data-cartbar-total]').textContent = money(total);
+    bar.hidden = count === 0 && !home;
+    document.body.classList.toggle('has-cart', count > 0 || home);
+    $('[data-cartbar-count]').textContent = count ? count + ' ' + plural(count, ['позиция', 'позиции', 'позиций']) : t('Меню и заказ');
+    $('[data-cartbar-total]').textContent = count ? money(total) : '';
+    if (home) {
+      $('[data-cartbar-go]').textContent = t(count ? 'Оформить →' : 'Выбрать →');
+      bar.href = pageUrl(count ? 'menu.html#cart' : 'menu.html');
+    }
     if (bump && count) { bar.classList.remove('is-bump'); void bar.offsetWidth; bar.classList.add('is-bump'); }
     if (!count) hideTray();
     renderActions();
+    if (!form) return;
 
     const empty = count === 0;
+    const savings = cartSavings();
+    $('[data-savings]').hidden = !savings;
+    $('[data-savings]').textContent = t('Скидка дня') + ': −' + money(savings);
     $('[data-empty]').hidden = !(empty && view === 'form');
     $('[data-done]').hidden = view !== 'done';
     form.hidden = empty || view !== 'form';
@@ -680,6 +720,77 @@
       if (trayDismissKey) dismissed.add(trayDismissKey);
       hideTray();
     });
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      if (!$('[data-sheet]').hidden) closeCart();
+      else if (!$('[data-tray]').hidden) hideTray();
+    });
+  }
+
+  // ──────────────── главная: скидка дня и плитки «Что в меню» ────────────────
+  function minPrice(item, withDeal) {
+    const base = item.prices ? Math.min.apply(null, Object.values(item.prices))
+      : (item.price || 0) + groupsOf(item).filter(g => !g.optional).reduce((sum, g) => sum + Math.min.apply(null, g.options.map(o => o.price || 0)), 0);
+    return withDeal === false ? base : dealPrice(item.id, base);
+  }
+
+  function renderDeal() {
+    if (!DEAL) return;
+    const item = ITEMS[DEAL.items.find(id => ITEMS[id])];
+    const tag = '🔥 ' + dealTag();
+    const box = $('[data-deal-box]'), banner = $('[data-deal-banner]');
+    if (box) {                                   // большая карточка на главной
+      $('[data-deal]').hidden = false;
+      [
+        DEAL.image ? el('div', { class: 'deal__media' }, [el('img', { src: DEAL.image, alt: DEAL.imageAlt || DEAL.title, loading: 'lazy' })]) : null,
+        el('div', { class: 'deal__body' }, [
+          el('span', { class: 'deal__badge', text: tag }),
+          el('h2', { text: DEAL.title }),
+          DEAL.text ? el('p', { class: 'deal__text', text: DEAL.text }) : null,
+          el('div', { class: 'deal__price' }, [el('s', { text: money(minPrice(item, false)) }), el('b', { text: money(minPrice(item)) })]),
+          el('div', { class: 'deal__cta' }, [
+            el('a', { class: 'btn btn--yellow btn--lg', href: pageUrl('menu.html#item-' + item.id), text: 'Заказать со скидкой' }),
+            el('span', { class: 'deal__until', text: t('Действует сегодня до {time}', { time: hh(CFG.hours.close) }) })
+          ])
+        ])
+      ].forEach(node => node && box.appendChild(node));
+    }
+    if (banner) {                                // узкая полоска на странице заказа
+      banner.hidden = false;
+      banner.href = '#item-' + item.id;
+      banner.replaceChildren(el('span', { class: 'dealbar__badge', text: tag }), el('span', { class: 'dealbar__t', text: DEAL.title }),
+        el('span', { class: 'dealbar__go', text: 'Показать →' }));
+    }
+  }
+
+  function renderTeaser() {
+    const box = $('[data-teaser]');
+    if (!box) return;
+    CATS.forEach(cat => box.appendChild(el('a', { class: 'tile', href: pageUrl('menu.html#cat-' + cat.id) }, [
+      el('span', { class: 'tile__e', text: cat.emoji || '🍽️', 'aria-hidden': 'true' }),
+      el('span', { class: 'tile__t', text: cat.title }),
+      el('span', { class: 'tile__p', text: t('от {price}', { price: money(Math.min.apply(null, cat.items.map(i => minPrice(i)))) }) }),
+      DEAL && cat.items.some(i => DEAL.items.includes(i.id)) ? el('span', { class: 'flag', text: dealTag() }) : null
+    ])));
+  }
+
+  // menu.html#cart открывает корзину, #item-… / #cat-… показывает блюдо или раздел (они рисуются скриптом,
+  // поэтому браузер сам к ним не прокрутит). При загрузке — мгновенно, без анимации и без rAF: так работает и в фоновой вкладке.
+  let hashScrollY = null;
+  function openFromHash(onLoad) {
+    const hash = decodeURIComponent(location.hash.slice(1));
+    if (!hash) return;
+    if (hash === 'cart') {
+      if (form) { openCart(); history.replaceState(null, '', location.pathname + location.search); }
+      return;
+    }
+    const target = document.getElementById(hash);
+    if (!target) return;
+    target.scrollIntoView({ block: hash.startsWith('item-') ? 'center' : 'start', behavior: onLoad === true ? 'instant' : 'smooth' });
+    hashScrollY = window.scrollY;
+    if (hash.startsWith('item-')) {
+      target.classList.remove('is-spot'); void target.offsetWidth; target.classList.add('is-spot');
+    }
   }
 
   // ───────────────────────────── отзывы ─────────────────────────────
@@ -784,8 +895,7 @@
         if (e.key === 'Escape') close();
         if (e.key === 'ArrowLeft') show(index - 1);
         if (e.key === 'ArrowRight') show(index + 1);
-      } else if (!$('[data-sheet]').hidden && e.key === 'Escape') closeCart();
-      else if (!$('[data-tray]').hidden && e.key === 'Escape') hideTray();
+      }
     });
   }
 
@@ -824,13 +934,19 @@
   }
 
   // ──────────────────────────────── старт ────────────────────────────────
+  // каждая часть запускается, только если её разметка есть на странице (index.html — витрина, menu.html — заказ)
   applyConfig();
-  renderMenu();
-  initCheckout();
-  initKeyboard();
-  renderReviews();
-  initGallery();
+  if ($('[data-menu]')) renderMenu();
+  if (form) { initCheckout(); initKeyboard(); }
+  if ($('[data-reviews]')) renderReviews();
+  if ($('[data-gallery]')) initGallery();
+  renderDeal();
+  renderTeaser();
   renderStatus();
   renderCart(false);
+  openFromHash(true);
+  // картинки и шрифты догружаются и сдвигают вёрстку — поправляем позицию, если гость сам ещё не листал
+  window.addEventListener('load', () => { if (hashScrollY !== null && Math.abs(window.scrollY - hashScrollY) < 8) openFromHash(true); });
+  window.addEventListener('hashchange', () => openFromHash(false));
   setInterval(renderStatus, 60000);
 })();

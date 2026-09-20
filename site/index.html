@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="kk">
+<html lang="kk" data-page="home">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -9,7 +9,7 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#141a4a">
   <meta name="format-detection" content="telephone=no">
-  <script src="js/i18n.js?v=20260920-5"></script>
+  <script src="js/i18n.js?v=20260920-6"></script>
 
   <meta property="og:type" content="website">
   <meta property="og:locale" content="ru_KZ">
@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20260920-5">
+  <link rel="stylesheet" href="css/style.css?v=20260920-6">
 
   <script type="application/ld+json">
   {
@@ -66,7 +66,7 @@
   <symbol id="i-trash" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></symbol>
 </svg>
 
-<a class="skip" href="#menu">Перейти к меню</a>
+<a class="skip" href="menu.html" data-page-link>Перейти к меню</a>
 
 <div id="page">
   <header class="top">
@@ -75,7 +75,7 @@
         <span class="logo__a">ISTANBUL</span><span class="logo__b">DONER</span>
       </a>
       <nav class="nav" aria-label="Разделы">
-        <a href="#menu">Меню</a>
+        <a href="menu.html" data-page-link>Меню</a>
         <a href="#reviews">Отзывы</a>
         <a href="#gallery">Фото</a>
         <a href="#contacts">Контакты</a>
@@ -89,10 +89,10 @@
         <a class="top__phone" href="tel:+77078909669" data-phone>
           <svg class="ic"><use href="#i-phone"/></svg><span data-phone-text>+7 707 890 96 69</span>
         </a>
-        <button class="top__cart" type="button" data-open-cart aria-label="Открыть корзину">
+        <a class="top__cart" href="menu.html#cart" data-page-link aria-label="Открыть корзину">
           <svg class="ic"><use href="#i-bag"/></svg>
           <span class="top__cart-count" data-cart-count hidden>0</span>
-        </button>
+        </a>
       </div>
     </div>
   </header>
@@ -106,7 +106,7 @@
           <h1>Сочный <em>донер</em> — закажите за&nbsp;минуту</h1>
           <p class="hero__lead">Выберите блюда на сайте и отправьте заказ в WhatsApp — оператор подтвердит заказ и время приготовления. Доставка и&nbsp;навынос, каждый день с&nbsp;10:00 до&nbsp;24:00.</p>
           <div class="hero__cta">
-            <a class="btn btn--yellow btn--lg" href="#menu">Оформить заказ</a>
+            <a class="btn btn--yellow btn--lg" href="menu.html" data-page-link>Оформить заказ</a>
             <a class="btn btn--ghost btn--lg" href="https://wa.me/77078909669" target="_blank" rel="noopener" data-wa-chat>
               <svg class="ic"><use href="#i-whatsapp"/></svg>Написать в WhatsApp
             </a>
@@ -137,16 +137,22 @@
       </div>
     </section>
 
-    <!-- МЕНЮ -->
-    <section class="section" id="menu">
+    <!-- СКИДКА ДНЯ: настраивается в config.js → deals; блок скрыт, если на сегодня акции нет -->
+    <section class="section section--deal" id="deal" data-deal hidden>
+      <div class="wrap"><div class="deal" data-deal-box></div></div>
+    </section>
+
+    <!-- ЧТО В МЕНЮ: плитки категорий, ведут на страницу заказа -->
+    <section class="section section--teaser" id="menu">
       <div class="wrap">
-        <div class="section__head">
-          <h2>Меню</h2>
-          <p>Нажмите «+», чтобы добавить блюдо. Заказ отправляется одним сообщением в WhatsApp.</p>
+        <div class="section__head section__head--row">
+          <div>
+            <h2>Что в меню</h2>
+            <p>Выберите раздел — откроется страница заказа.</p>
+          </div>
+          <a class="btn btn--red" href="menu.html" data-page-link>Всё меню и заказ →</a>
         </div>
-        <div class="cats" data-cats role="navigation" aria-label="Категории меню"></div>
-        <div data-menu></div>
-        <p class="menu-hint" data-menu-hint></p>
+        <div class="tiles" data-teaser></div>
       </div>
     </section>
 
@@ -217,126 +223,11 @@
   </footer>
 </div>
 
-<!-- Предложение к покупке: появляется после добавления блюда -->
-<div class="tray" data-tray role="region" aria-label="Предложение к заказу" aria-live="polite" hidden>
-  <div class="tray__head">
-    <div>
-      <div class="tray__lead" data-tray-lead hidden></div>
-      <div class="tray__t" data-tray-title></div>
-    </div>
-    <button class="tray__x" type="button" data-tray-close aria-label="Скрыть предложение"><svg class="ic"><use href="#i-close"/></svg></button>
-  </div>
-  <div class="tray__chips" data-tray-chips></div>
-</div>
-
-<!-- Плашка корзины -->
-<button class="cartbar" type="button" data-open-cart data-cartbar hidden>
-  <span class="cartbar__l"><svg class="ic"><use href="#i-bag"/></svg><span data-cartbar-count>0 позиций</span></span>
-  <span class="cartbar__r"><b data-cartbar-total>0 ₸</b><span>Оформить →</span></span>
-</button>
-
-<!-- Корзина и оформление -->
-<div class="sheet" data-sheet hidden>
-  <div class="sheet__backdrop" data-close-cart></div>
-  <div class="sheet__panel" role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabindex="-1">
-    <div class="sheet__head">
-      <h2 id="sheet-title">Ваш заказ</h2>
-      <button class="round round--plain" type="button" data-close-cart aria-label="Закрыть корзину"><svg class="ic"><use href="#i-close"/></svg></button>
-      <button class="keyboard-done" type="button" data-dismiss-keyboard hidden>Готово · скрыть клавиатуру</button>
-    </div>
-
-    <div class="sheet__scroll" data-sheet-scroll>
-      <!-- пусто -->
-      <div class="empty" data-empty hidden>
-        <div class="empty__e" aria-hidden="true">🌯</div>
-        <b>Корзина пока пустая</b>
-        <p>Добавьте донер или комбо — и отправьте заказ в WhatsApp.</p>
-        <button class="btn btn--red" type="button" data-close-cart>Перейти к меню</button>
-      </div>
-
-      <!-- заказ отправлен -->
-      <div class="done" data-done hidden>
-        <div class="done__e" aria-hidden="true">✅</div>
-        <b>Заказ открыт в WhatsApp</b>
-        <p>Нажмите «Отправить» в чате — оператор подтвердит заказ, стоимость доставки и время.</p>
-        <p class="done__sub">WhatsApp не открылся? Скопируйте текст заказа и отправьте его на номер <a href="tel:+77078909669" data-phone><span data-phone-text>+7 707 890 96 69</span></a>.</p>
-        <div class="done__btns">
-          <button class="btn btn--light" type="button" data-copy><svg class="ic"><use href="#i-copy"/></svg>Скопировать заказ</button>
-          <button class="btn btn--light" type="button" data-back>Вернуться к заказу</button>
-          <button class="btn btn--red" type="button" data-new>Новый заказ</button>
-        </div>
-      </div>
-
-      <form class="checkout" data-checkout novalidate hidden>
-        <div class="closed-note" data-closed-note hidden></div>
-
-        <ul class="lines" data-lines></ul>
-
-        <div class="cs" data-cart-suggest hidden></div>
-
-        <fieldset class="fs">
-          <legend>Как получите заказ?</legend>
-          <div class="seg seg--2">
-            <label><input type="radio" name="mode" value="delivery" checked><span>🛵 Доставка</span></label>
-            <label><input type="radio" name="mode" value="pickup"><span>🥡 Самовывоз</span></label>
-          </div>
-        </fieldset>
-
-        <div class="field" data-address-field>
-          <label for="f-address">Адрес доставки</label>
-          <input id="f-address" name="address" type="text" autocomplete="street-address" placeholder="Улица, дом, квартира, подъезд">
-          <p class="err" data-err="address" hidden>Укажите адрес, куда привезти заказ</p>
-        </div>
-        <p class="pickup-note" data-pickup-note hidden><svg class="ic"><use href="#i-pin"/></svg><span>Заберёте сами: <b data-address>ул. Есет батыра, 4Б</b></span></p>
-
-        <div class="grid2">
-          <div class="field">
-            <label for="f-name">Ваше имя</label>
-            <input id="f-name" name="name" type="text" autocomplete="given-name" placeholder="Как к вам обращаться">
-            <p class="err" data-err="name" hidden>Напишите имя</p>
-          </div>
-          <div class="field">
-            <label for="f-phone">Телефон <i>— необязательно</i></label>
-            <input id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" enterkeyhint="done" placeholder="+7 7__ ___ __ __" aria-describedby="f-phone-hint">
-            <p class="hint" id="f-phone-hint">Если звонить не на номер из WhatsApp</p>
-          </div>
-        </div>
-
-        <fieldset class="fs">
-          <legend>Когда</legend>
-          <div class="seg seg--2">
-            <label><input type="radio" name="when" value="asap" checked><span>Как можно скорее</span></label>
-            <label><input type="radio" name="when" value="time"><span>Ко времени</span></label>
-          </div>
-          <div class="field field--time" data-time-field hidden>
-            <label for="f-time">К какому времени</label>
-            <input id="f-time" name="time" type="time" min="10:00" max="23:59">
-            <p class="err" data-err="time" hidden>Укажите время</p>
-          </div>
-        </fieldset>
-
-        <fieldset class="fs">
-          <legend>Оплата</legend>
-          <div class="seg seg--3" data-payments></div>
-        </fieldset>
-
-        <div class="field">
-          <label for="f-comment">Комментарий <i>— необязательно</i></label>
-          <textarea id="f-comment" name="comment" rows="2" placeholder="Без лука, позвонить в домофон, добавить бургер…"></textarea>
-        </div>
-
-        <p class="privacy">Сайт ничего никуда не отправляет сам: данные попадут только в ваше сообщение в WhatsApp.</p>
-      </form>
-    </div>
-
-    <div class="sheet__foot" data-sheet-foot hidden>
-      <div class="total"><span>Итого<small data-total-note></small></span><b data-total>0 ₸</b></div>
-      <a class="btn btn--wa btn--xl" href="#" target="_blank" rel="noopener" data-send>
-        <svg class="ic"><use href="#i-whatsapp"/></svg>Отправить заказ в WhatsApp
-      </a>
-    </div>
-  </div>
-</div>
+<!-- Плавающая кнопка: пустая корзина — «Меню и заказ», с товарами — корзина; ведёт на страницу заказа -->
+<a class="cartbar" href="menu.html" data-page-link data-cartbar data-cartbar-home>
+  <span class="cartbar__l"><svg class="ic"><use href="#i-bag"/></svg><span data-cartbar-count>Меню и заказ</span></span>
+  <span class="cartbar__r"><b data-cartbar-total></b><span data-cartbar-go>Выбрать →</span></span>
+</a>
 
 <!-- Просмотр фото -->
 <div class="lightbox" data-lightbox hidden>
@@ -348,8 +239,8 @@
 
 <div class="toast" data-toast role="status" aria-live="polite"></div>
 
-<script src="js/config.js?v=20260920-5"></script>
-<script src="js/reviews.js"></script>
-<script src="js/app.js?v=20260920-5"></script>
+<script src="js/config.js?v=20260920-6"></script>
+<script src="js/reviews.js?v=20260920-6"></script>
+<script src="js/app.js?v=20260920-6"></script>
 </body>
 </html>

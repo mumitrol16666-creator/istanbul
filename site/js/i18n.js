@@ -147,6 +147,21 @@
     'Сырный': 'Ірімшікті', 'соус сырный': 'ірімшікті тұздық',
     'Чесночный': 'Сарымсақты', 'соус чесночный': 'сарымсақты тұздық',
     'Без соуса': 'Тұздықсыз', 'без соуса': 'тұздықсыз',
+    // главная-витрина и страница заказа
+    'Что в меню': 'Мәзірде не бар',
+    'Выберите раздел — откроется страница заказа.': 'Бөлімді таңдаңыз — тапсырыс беті ашылады.',
+    'Всё меню и заказ →': 'Толық мәзір және тапсырыс →',
+    'Меню и заказ': 'Мәзір және тапсырыс',
+    'Выбрать →': 'Таңдау →',
+    'О кафе': 'Кафе туралы',
+    'На главную': 'Басты бетке',
+    // скидка дня
+    'Скидка дня': 'Күн жеңілдігі',
+    'Заказать со скидкой': 'Жеңілдікпен тапсырыс беру',
+    'Действует сегодня до {time}': 'Бүгін {time} дейін жарамды',
+    'Показать →': 'Көрсету →',
+    'Комбо «Doner» — минус 10%': '«Doner» комбосы — 10% арзан',
+    'Донер куриный, картофель фри и кола 0,5 л. Скидка применится в корзине сама — промокод не нужен.': 'Тауық етінен донер, фри картобы және 0,5 л кола. Жеңілдік себетте автоматты түрде есептеледі — промокод қажет емес.',
     // предложения к покупке
     'К донеру отлично зайдёт': 'Донермен бірге тамаша үйлеседі',
     'Добавить напиток?': 'Сусын қосасыз ба?',
@@ -233,12 +248,19 @@
   }
 
   // Переводим только подписи, сохраняя идентификаторы блюд и значения полей.
-  const contentKeys = new Set(['name', 'title', 'desc', 'imageAlt', 'line', 'badge', 'note', 'alt', 'address', 'city', 'landmark', 'label', 'slogan', 'menuHint', 'deliveryNote', 'ask', 'short']);
+  const contentKeys = new Set(['name', 'title', 'desc', 'imageAlt', 'line', 'badge', 'note', 'alt', 'address', 'city', 'landmark', 'label', 'slogan', 'menuHint', 'deliveryNote', 'ask', 'short', 'text']);
   function localize(value, key) {
     if (typeof value === 'string') return contentKeys.has(key) || key === 'includes' ? t(value) : value;
     if (Array.isArray(value)) return value.map(entry => localize(entry, key));
     if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, localize(v, k)]));
     return value;
+  }
+
+  // Ссылки между страницами несут выбранный язык — работает и там, где localStorage недоступен
+  function pageUrl(href) {
+    const url = new URL(href, location.href);
+    url.searchParams.set('lang', language);
+    return url.href;
   }
 
   function init() {
@@ -259,9 +281,13 @@
         if (node.hasAttribute(attr)) node.setAttribute(attr, t(node.getAttribute(attr)));
       });
     });
+    document.querySelectorAll('a[data-page-link]').forEach(link => { link.href = pageUrl(link.getAttribute('href')); });
     if (language === 'kk') {
-      document.title = 'Istanbul Doner — Хромтауда донер мен комбо жеткізу';
-      const description = 'Хромтаудағы Istanbul Doner: донер, комбо, фри және наггетстер. Тапсырысты сайтта жинап, WhatsApp арқылы жіберіңіз. Күн сайын 10:00–24:00.';
+      const menuPage = document.documentElement.dataset.page === 'menu';
+      document.title = menuPage ? 'Мәзір және тапсырыс — Istanbul Doner, Хромтау' : 'Istanbul Doner — Хромтауда донер мен комбо жеткізу';
+      const description = menuPage
+        ? 'Хромтаудағы Istanbul Doner мәзірі: донер, комбо, тіскебасарлар, сусындар мен тұздықтар — бағаларымен. Тағамдарды таңдап, тапсырысты WhatsApp арқылы жіберіңіз. Күн сайын 10:00–24:00.'
+        : 'Хромтаудағы Istanbul Doner: донер, комбо, фри және наггетстер. Тапсырысты сайтта жинап, WhatsApp арқылы жіберіңіз. Күн сайын 10:00–24:00.';
       document.querySelector('meta[name="description"]').content = description;
       document.querySelector('meta[property="og:title"]').content = document.title;
       document.querySelector('meta[property="og:description"]').content = description;
@@ -282,5 +308,5 @@
     });
   }
 
-  window.ISTANBUL_I18N = { language, t, localize, init };
+  window.ISTANBUL_I18N = { language, t, localize, init, pageUrl };
 })();
