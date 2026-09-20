@@ -946,6 +946,7 @@
     $$('[data-phone]').forEach(a => { a.href = 'tel:' + c.phone; });
     $$('[data-phone-text]').forEach(n => { n.textContent = c.phoneDisplay; });
     $$('[data-wa-chat]').forEach(a => { a.href = waLink(''); });
+    $$('[data-wa-text]').forEach(n => { n.textContent = c.whatsappDisplay || '+' + c.whatsapp; });
     $$('[data-address]').forEach(n => { n.textContent = c.address; });
     $$('[data-city]').forEach(n => { n.textContent = c.city; });
     $$('[data-landmark]').forEach(n => { n.textContent = c.landmark; n.hidden = !c.landmark; });

@@ -9,7 +9,7 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#141a4a">
   <meta name="format-detection" content="telephone=no">
-  <script src="js/i18n.js?v=20260920-8"></script>
+  <script src="js/i18n.js?v=20260920-9"></script>
 
   <meta property="og:type" content="website">
   <meta property="og:locale" content="ru_KZ">
@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20260920-8">
+  <link rel="stylesheet" href="css/style.css?v=20260920-9">
 
 </head>
 <body>
@@ -58,7 +58,7 @@
           <p class="legal__lead">Сайт помогает собрать заказ и открыть WhatsApp с готовым текстом. Сам сайт не отправляет ваши данные на сервер и не хранит их у себя — заказ вы отправляете кафе сами, со своего телефона.</p>
 
           <h2>1. Кто отвечает за ваши данные</h2>
-          <p>Кафе Istanbul Doner: <span data-full-address></span>, телефон и WhatsApp <a data-phone><span data-phone-text></span></a>. <span data-legal hidden></span></p>
+          <p>Кафе Istanbul Doner: <span data-full-address></span>, телефон <a data-phone><span data-phone-text></span></a>, заказы в WhatsApp — <a data-wa target="_blank" rel="noopener"><span data-wa-text></span></a>. <span data-legal hidden></span></p>
           <p>Кафе обрабатывает персональные данные в соответствии с Законом Республики Казахстан «О персональных данных и их защите».</p>
 
           <h2>2. Какие данные и зачем</h2>
@@ -98,7 +98,7 @@
           <p class="legal__lead">Сайт тапсырысты жинап, дайын мәтінмен WhatsApp-ты ашуға көмектеседі. Сайттың өзі деректеріңізді серверге жібермейді және сақтамайды — тапсырысты кафеге өз телефоныңыздан өзіңіз жібересіз.</p>
 
           <h2>1. Деректеріңізге кім жауапты</h2>
-          <p>Istanbul Doner кафесі: <span data-full-address></span>, телефон және WhatsApp: <a data-phone><span data-phone-text></span></a>. <span data-legal hidden></span></p>
+          <p>Istanbul Doner кафесі: <span data-full-address></span>, телефон: <a data-phone><span data-phone-text></span></a>, WhatsApp арқылы тапсырыс: <a data-wa target="_blank" rel="noopener"><span data-wa-text></span></a>. <span data-legal hidden></span></p>
           <p>Кафе дербес деректерді Қазақстан Республикасының «Дербес деректер және оларды қорғау туралы» Заңына сәйкес өңдейді.</p>
 
           <h2>2. Қандай деректер және не үшін</h2>
@@ -143,7 +143,7 @@
   </footer>
 </div>
 
-<script src="js/config.js?v=20260920-8"></script>
+<script src="js/config.js?v=20260920-9"></script>
 <script>
   // Страница политики: без app.js — только язык, контакты из config.js и кнопка «удалить мои данные»
   (function () {
@@ -153,6 +153,8 @@
     document.querySelectorAll('[data-full-address]').forEach(function (n) { n.textContent = c.city.split(',')[0] + ', ' + c.address; });
     document.querySelectorAll('[data-phone]').forEach(function (a) { a.href = 'tel:' + c.phone; });
     document.querySelectorAll('[data-phone-text]').forEach(function (n) { n.textContent = c.phoneDisplay; });
+    document.querySelectorAll('[data-wa]').forEach(function (a) { a.href = 'https://wa.me/' + c.whatsapp; });
+    document.querySelectorAll('[data-wa-text]').forEach(function (n) { n.textContent = c.whatsappDisplay || '+' + c.whatsapp; });
     document.querySelectorAll('[data-year]').forEach(function (n) { n.textContent = new Date().getFullYear(); });
     if (legal.operator) document.querySelectorAll('[data-legal]').forEach(function (n) {
       n.hidden = false;
