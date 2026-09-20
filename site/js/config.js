@@ -7,6 +7,21 @@
  * в нужную категорию. id — любое уникальное слово латиницей.
  * Чтобы временно убрать блюдо или категорию — добавьте hidden: true.
  */
+
+// Вопрос, который сайт задаёт сразу после добавления фри: соус к фри бесплатный (так на меню-борде).
+// ⚠️ Названия соусов — заглушки, сверить с кафе.
+const ISTANBUL_FREE_SAUCE = {
+  id: 'sauce', title: 'Соус', optional: true,
+  ask: 'Соус к фри — бесплатно. Какой положить?',
+  short: 'Соус бесплатно:',
+  options: [
+    { id: 'cheese', name: 'Сырный', line: 'соус сырный' },
+    { id: 'garlic', name: 'Чесночный', line: 'соус чесночный' },
+    { id: 'ketchup', name: 'Кетчуп', line: 'кетчуп' },
+    { id: 'none', name: 'Без соуса', line: 'без соуса' }
+  ]
+};
+
 window.ISTANBUL = {
   brand: {
     name: 'Istanbul Doner',
@@ -83,12 +98,13 @@ window.ISTANBUL = {
       title: 'Комбо',
       items: [
         {
+          // covers — что уже входит в комбо: эти блюда/категории не будут предлагаться «добавить к заказу»
           id: 'combo-doner', name: 'Комбо «Doner»', price: 2490, emoji: '🌯', badge: 'Хит',
-          includes: ['Донер куриный', 'Картофель фри', 'Кола 0,5 л']
+          includes: ['Донер куриный', 'Картофель фри', 'Кола 0,5 л'], covers: ['drinks', 'fries', 'fries-country']
         },
         {
           id: 'combo-istanbul', name: 'Комбо «Istanbul»', price: 6790, emoji: '🍕', badge: 'На компанию',
-          includes: ['Донер куриный', 'Пицца пепперони', 'Крылышки 7 шт', 'Картофель фри', 'Кола 1 л']
+          includes: ['Донер куриный', 'Пицца пепперони', 'Крылышки 7 шт', 'Картофель фри', 'Кола 1 л'], covers: ['drinks', 'fries', 'fries-country']
         }
       ]
     },
@@ -97,10 +113,97 @@ window.ISTANBUL = {
       title: 'Снэки',
       note: 'Соус к фри — бесплатно',
       items: [
-        { id: 'fries', name: 'Фри', price: 800, emoji: '🍟' },
-        { id: 'fries-country', name: 'Фри по-деревенски', price: 900, emoji: '🥔' },
+        // groups с optional: true — вопрос, который сайт задаёт сразу после добавления (на цену не влияет)
+        { id: 'fries', name: 'Фри', price: 800, emoji: '🍟', groups: [ISTANBUL_FREE_SAUCE] },
+        { id: 'fries-country', name: 'Фри по-деревенски', price: 900, emoji: '🥔', groups: [ISTANBUL_FREE_SAUCE] },
         { id: 'nuggets', name: 'Наггетсы', price: 1190, emoji: '🍗' },
         { id: 'pepper', name: 'Перчик', price: 50, emoji: '🌶️' }
+      ]
+    },
+    {
+      // ⚠️ НАПИТКИ: ассортимент, вкусы и цены — ЗАГЛУШКИ (цены 0,5 л взяты с сайта-референса, 1 л — оценка).
+      //    Перед запуском сверить с кафе. type: 'options' — карточка с выбором вкуса и объёма;
+      //    цена = сумма price выбранных вариантов. style: 'select' — выпадающий список, иначе кнопки.
+      id: 'drinks',
+      title: 'Напитки',
+      items: [
+        {
+          id: 'cola', type: 'options', name: 'Coca-Cola', emoji: '🥤', tone: '#e6202a',
+          groups: [
+            { id: 'flavor', title: 'Вкус', style: 'select', options: [
+              { id: 'classic', name: 'Классик', line: 'классик' },
+              { id: 'zero', name: 'Zero', line: 'zero' }
+            ] },
+            { id: 'size', title: 'Объём', options: [
+              { id: '05', name: '0,5 л', line: '0,5 л', price: 650 },
+              { id: '1', name: '1 л', line: '1 л', price: 950 }
+            ] }
+          ]
+        },
+        {
+          id: 'fanta', type: 'options', name: 'Fanta', emoji: '🍊', tone: '#f47b20',
+          groups: [
+            { id: 'flavor', title: 'Вкус', style: 'select', options: [
+              { id: 'orange', name: 'Апельсин', line: 'апельсин' },
+              { id: 'citrus', name: 'Цитрус', line: 'цитрус' }
+            ] },
+            { id: 'size', title: 'Объём', options: [
+              { id: '05', name: '0,5 л', line: '0,5 л', price: 650 },
+              { id: '1', name: '1 л', line: '1 л', price: 950 }
+            ] }
+          ]
+        },
+        {
+          id: 'piko', type: 'options', name: 'Сок Piko', emoji: '🧃', tone: '#2b2b2b',
+          groups: [
+            { id: 'flavor', title: 'Вкус', style: 'select', options: [
+              { id: 'apple', name: 'Яблоко', line: 'яблоко' },
+              { id: 'orange', name: 'Апельсин', line: 'апельсин' },
+              { id: 'multi', name: 'Мультифрукт', line: 'мультифрукт' }
+            ] },
+            { id: 'size', title: 'Объём', options: [
+              { id: '02', name: '0,2 л', line: '0,2 л', price: 400 },
+              { id: '1', name: '1 л', line: '1 л', price: 1100 }
+            ] }
+          ]
+        },
+        {
+          id: 'fuse', type: 'options', name: 'Чай Fuse', emoji: '🍋', tone: '#3aa935',
+          groups: [
+            { id: 'flavor', title: 'Вкус', style: 'select', options: [
+              { id: 'lemon', name: 'Лимон', line: 'лимон' },
+              { id: 'peach', name: 'Персик', line: 'персик' }
+            ] },
+            { id: 'size', title: 'Объём', options: [
+              { id: '05', name: '0,5 л', line: '0,5 л', price: 600 },
+              { id: '1', name: '1 л', line: '1 л', price: 900 }
+            ] }
+          ]
+        },
+        {
+          id: 'bonaqua', type: 'options', name: 'Вода BonAqua', emoji: '💧', tone: '#0a66c2',
+          groups: [
+            { id: 'flavor', title: 'Вид', style: 'select', options: [
+              { id: 'still', name: 'Без газа', line: 'без газа' },
+              { id: 'sparkling', name: 'Газированная', line: 'газированная' }
+            ] },
+            { id: 'size', title: 'Объём', options: [
+              { id: '05', name: '0,5 л', line: '0,5 л', price: 500 }
+            ] }
+          ]
+        }
+      ]
+    },
+    {
+      // ⚠️ СОУСЫ: с меню-борда известен только «острый соус — 100 ₸». Остальные названия и цены — заглушки.
+      id: 'sauces',
+      title: 'Соусы',
+      note: 'К фри один соус — бесплатно',
+      items: [
+        { id: 'sauce-cheese', name: 'Сырный соус', price: 100, emoji: '🧀' },
+        { id: 'sauce-garlic', name: 'Чесночный соус', price: 100, emoji: '🧄' },
+        { id: 'sauce-ketchup', name: 'Кетчуп', price: 100, emoji: '🍅' },
+        { id: 'sauce-hot', name: 'Острый соус', price: 100, emoji: '🌶️' }
       ]
     },
     {
@@ -117,7 +220,45 @@ window.ISTANBUL = {
   ],
 
   // Подсказка под меню (блюда, которых пока нет в списке)
-  menuHint: 'Бургеры, пицца, хот-доги, чикен и напитки тоже есть — напишите, что хотите, в комментарии к заказу, оператор подскажет цену.',
+  menuHint: 'Бургеры, пицца, хот-доги и чикен тоже есть — напишите, что хотите, в комментарии к заказу, оператор подскажет цену.',
+
+  // ───────────────────── ПРЕДЛОЖЕНИЯ К ПОКУПКЕ ─────────────────────
+  // Всплывающая подсказка сразу после добавления блюда. after — какие блюда её вызывают,
+  // suggest — что предложить (id блюда; для напитков — с выбранными вариантами и короткой подписью).
+  // То, что уже лежит в корзине или входит в комбо, не предлагается.
+  upsell: [
+    {
+      id: 'doner-sides', after: ['doner'], title: 'К донеру отлично зайдёт',
+      suggest: [
+        { id: 'fries' },
+        { id: 'cola', sel: { flavor: 'classic', size: '05' }, label: 'Coca-Cola 0,5 л' },
+        { id: 'pepper' }
+      ]
+    },
+    {
+      id: 'nuggets-sauce', after: ['nuggets'], title: 'К наггетсам — соус?',
+      suggest: [{ id: 'sauce-cheese' }, { id: 'sauce-garlic' }, { id: 'sauce-ketchup' }]
+    },
+    {
+      id: 'snack-drink', after: ['fries', 'fries-country', 'nuggets'], title: 'Добавить напиток?',
+      suggest: [
+        { id: 'cola', sel: { flavor: 'classic', size: '05' }, label: 'Coca-Cola 0,5 л' },
+        { id: 'fuse', sel: { flavor: 'lemon', size: '05' }, label: 'Чай Fuse 0,5 л' },
+        { id: 'piko', sel: { flavor: 'apple', size: '02' }, label: 'Сок Piko 0,2 л' }
+      ]
+    }
+  ],
+  // Категории, где достаточно одной позиции: есть любой напиток — другие напитки уже не предлагаем
+  upsellExclusive: ['drinks', 'sauces'],
+  // Блок «Добавить к заказу?» в корзине (показываются первые 4 подходящих)
+  cartSuggest: [
+    { id: 'cola', sel: { flavor: 'classic', size: '05' }, label: 'Coca-Cola 0,5 л' },
+    { id: 'fries' },
+    { id: 'sauce-cheese' },
+    { id: 'pepper' },
+    { id: 'nuggets' },
+    { id: 'fuse', sel: { flavor: 'lemon', size: '05' }, label: 'Чай Fuse 0,5 л' }
+  ],
 
   // ─────────────────────────── ГАЛЕРЕЯ ───────────────────────────
   // shape: 'tall' — плитка в 2 ряда, 'wide' — в 2 колонки. Порядок подобран так, чтобы сетка была без дыр.

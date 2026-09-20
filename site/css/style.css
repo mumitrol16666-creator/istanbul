@@ -256,6 +256,49 @@ h2 { font: 800 clamp(26px, 5.4vw, 40px)/1.1 var(--display); letter-spacing: -.02
 .card--combo .card__price { font: 800 22px/1 var(--display); color: var(--ink); }
 .card--combo .card__foot { padding-top: 14px; border-top: 1.5px dashed var(--line); }
 
+/* карточка с вариантами: напитки (вкус + объём) */
+.card--opt { grid-template-columns: auto 1fr; gap: 12px 14px; }
+.card--opt .card__e { grid-row: auto; width: 52px; height: 52px; border-radius: 50%; font-size: 26px; }
+.card__e--tone { background: color-mix(in srgb, var(--tone, #ffc629) 14%, #fff); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--tone, #ffc629) 28%, transparent); }
+.card--opt .card__name { align-self: center; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.card__count { font-size: 12px; font-weight: 600; color: #14713d; background: #e2f6ea; padding: 2px 9px; border-radius: 999px; }
+.card__ctrl { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; min-width: 0; }
+.card--opt .card__foot { grid-column: 1 / -1; }
+.card--opt .card__price { font-size: 18px; color: var(--ink); }
+.sel {
+  width: 100%; min-width: 0; min-height: 44px; padding: 0 38px 0 14px; border-radius: 14px; border: 1.5px solid var(--line);
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2316171d' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center / 16px;
+  font: 600 15px/1.2 var(--font); color: var(--ink); -webkit-appearance: none; appearance: none; cursor: pointer; text-overflow: ellipsis;
+}
+.sel:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+.seg--sm { padding: 4px; border-radius: 14px; gap: 4px; }
+.seg--sm span { min-height: 36px; font-size: 14px; border-radius: 11px; padding: 4px 6px; }
+
+/* ── предложение к покупке ── */
+.tray {
+  position: fixed; z-index: 46; left: 12px; right: 12px; bottom: calc(88px + env(safe-area-inset-bottom));
+  background: #fff; border-radius: 22px; padding: 14px 14px 16px; box-shadow: var(--shadow-lg), 0 0 0 1.5px var(--line);
+}
+.tray.is-in { animation: rise .32s cubic-bezier(.2, .8, .2, 1) both; }
+.tray__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.tray__lead { font-size: 13px; font-weight: 600; color: #14713d; margin-bottom: 2px; }
+.tray__t { font-weight: 700; font-size: 16px; line-height: 1.3; }
+.tray__x { flex: none; width: 36px; height: 36px; border: 0; border-radius: 50%; background: #f3efe7; display: grid; place-items: center; }
+.tray__x:hover { background: #e9e2d3; }
+.tray__x .ic { width: 16px; height: 16px; }
+.tray__chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 0; border-radius: 999px;
+  background: #fff4f3; box-shadow: inset 0 0 0 1.5px #f4c4c1; font-weight: 600; font-size: 15px; color: var(--ink); text-align: left;
+}
+.chip:hover { box-shadow: inset 0 0 0 2px var(--red); }
+.chip:active { transform: scale(.97); }
+.chip b { color: var(--red-dark); white-space: nowrap; }
+.chip__e { font-size: 18px; line-height: 1; }
+.chip--muted { background: #f3efe7; box-shadow: none; color: var(--muted); }
+.chip--muted:hover { box-shadow: inset 0 0 0 1.5px var(--muted); }
+.chip--sm { min-height: 36px; padding: 0 13px; font-size: 14px; }
+
 .menu-hint { margin-top: -10px; padding: 16px 18px; border-radius: 18px; background: #fff; box-shadow: inset 0 0 0 1.5px var(--line); color: #4b4e5c; font-size: 15px; }
 .menu-hint::before { content: '💬 '; }
 
@@ -390,7 +433,24 @@ h2 { font: 800 clamp(26px, 5.4vw, 40px)/1.1 var(--display); letter-spacing: -.02
 .line__opts { font-size: 14px; color: var(--muted); }
 .line__unit { font-size: 13px; color: var(--muted); }
 .line__sum { font-weight: 700; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.line__ask { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px 12px; border-radius: 14px; background: #fff6df; }
+.line__ask > span { width: 100%; font-size: 13px; font-weight: 700; color: #6a4b00; }
+.line__ask .chip { background: #fff; box-shadow: inset 0 0 0 1.5px #ead9ae; }
+.line__ask .chip:hover { box-shadow: inset 0 0 0 2px var(--red); }
 .line__ctrl { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; }
+
+/* «Добавить к заказу?» в корзине */
+.cs { display: grid; gap: 10px; }
+.cs__t { font-weight: 700; font-size: 15px; }
+.cs__row { display: flex; gap: 10px; overflow-x: auto; margin: 0 -18px; padding: 2px 18px 8px; scrollbar-width: none; }
+.cs__row::-webkit-scrollbar { display: none; }
+.cs__item { flex: 0 0 136px; display: grid; gap: 4px; justify-items: start; align-content: start; text-align: left; padding: 12px; border: 0; border-radius: 18px; background: #fff; box-shadow: var(--shadow); }
+.cs__item:hover { box-shadow: var(--shadow), inset 0 0 0 2px var(--red); }
+.cs__item:active { transform: scale(.97); }
+.cs__e { font-size: 26px; line-height: 1.1; }
+.cs__n { font-weight: 600; font-size: 14px; line-height: 1.25; min-height: 2.5em; }
+.cs__p { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; color: var(--red-dark); white-space: nowrap; }
+.cs__p .ic { width: 12px; height: 12px; padding: 3px; box-sizing: content-box; border-radius: 50%; background: var(--red); color: #fff; }
 .line .stepper button { width: 36px; height: 36px; }
 .line__del { border: 0; background: none; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; font-size: 14px; min-height: 40px; padding: 0 4px; }
 .line__del:hover { color: var(--red); }
@@ -427,7 +487,7 @@ h2 { font: 800 clamp(26px, 5.4vw, 40px)/1.1 var(--display); letter-spacing: -.02
 
 /* ── уведомление ── */
 .toast {
-  position: fixed; z-index: 80; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom)); transform: translate(-50%, 20px);
+  position: fixed; z-index: 80; left: 50%; top: calc(var(--top-h) + 68px); transform: translate(-50%, -14px); width: max-content;
   max-width: calc(100% - 32px); padding: 12px 18px; border-radius: 999px; background: var(--navy); color: #fff;
   font-size: 15px; font-weight: 600; box-shadow: var(--shadow-lg); opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; text-align: center;
 }
@@ -453,6 +513,7 @@ h2 { font: 800 clamp(26px, 5.4vw, 40px)/1.1 var(--display); letter-spacing: -.02
 }
 /* ── планшет и десктоп ── */
 @media (min-width: 560px) {
+  .card__ctrl { grid-template-columns: 1fr; }
   .doner__buy { grid-template-columns: auto minmax(0, 1fr); align-items: center; }
   .doner__qty span { display: none; }
   .grid2 { grid-template-columns: 1fr 1fr; }
@@ -496,7 +557,9 @@ h2 { font: 800 clamp(26px, 5.4vw, 40px)/1.1 var(--display); letter-spacing: -.02
   .contacts__map, .contacts__map iframe { min-height: 100%; }
   .foot__in { grid-template-columns: auto 1fr; align-items: center; gap: 28px; }
   .cartbar { left: auto; right: 24px; bottom: 24px; min-width: 340px; }
-  .toast { bottom: 110px; }
+  .tray { left: auto; right: 24px; bottom: 102px; width: 410px; padding: 16px 16px 18px; }
+  .cards--opt { grid-template-columns: repeat(3, 1fr); }
+  .cs__row { margin: 0 -26px; padding-inline: 26px; }
   .sheet__panel { left: auto; top: 0; bottom: 0; width: 500px; height: auto; border-radius: 26px 0 0 26px; animation-name: side; }
   .sheet__head { padding: 24px 26px 14px; }
   .sheet__scroll { padding: 4px 26px 26px; }

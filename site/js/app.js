@@ -1,4 +1,4 @@
-/* Istanbul Doner — меню, корзина и отправка заказа в WhatsApp. Настройки — в config.js */
+/* Istanbul Doner — меню, корзина, предложения к покупке и отправка заказа в WhatsApp. Настройки — в config.js */
 (function () {
   'use strict';
 
@@ -43,8 +43,9 @@
 
   // ───────────────────────── меню: индекс блюд ─────────────────────────
   const CATS = CFG.menu.filter(c => !c.hidden).map(c => Object.assign({}, c, { items: c.items.filter(i => !i.hidden) }));
-  const ITEMS = {};
-  CATS.forEach(c => c.items.forEach(i => { ITEMS[i.id] = i; }));
+  const ITEMS = {}, CAT_OF = {};
+  CATS.forEach(c => c.items.forEach(i => { ITEMS[i.id] = i; CAT_OF[i.id] = c.id; }));
+  const groupsOf = item => (item && item.groups) || [];
 
   // ───────────────────────────── корзина ─────────────────────────────
   // строка корзины: { id, sel: {groupId: optionId}, addons: [id], qty } — названия и цены всегда берём из config.js
@@ -52,27 +53,34 @@
 
   function lineKey(line) {
     const item = ITEMS[line.id];
-    if (!item || item.type !== 'configurable') return line.id;
-    return [line.id, item.groups.map(g => (line.sel || {})[g.id]).join('/'), (line.addons || []).slice().sort().join('+')].join('|');
+    if (!groupsOf(item).length) return line.id;
+    return [line.id, groupsOf(item).map(g => (line.sel || {})[g.id] || '').join('/'), (line.addons || []).slice().sort().join('+')].join('|');
   }
 
+  // Цена: таблица item.prices (ключ — обязательные варианты через «/») либо item.price + цены выбранных вариантов.
+  // Необязательная группа (optional) без ответа попадает в pending — сайт спросит её отдельно.
   function resolve(line) {
     const item = ITEMS[line.id];
     if (!item) return null;
     const qty = Math.max(1, Math.min(99, parseInt(line.qty, 10) || 1));
-    if (item.type !== 'configurable') {
-      return { key: lineKey(line), title: item.name, opts: '', unit: item.price, qty, sum: item.price * qty };
+    const picks = groupsOf(item).map(g => ({ g, o: g.options.find(o => o.id === (line.sel || {})[g.id]) || null }));
+    if (picks.some(p => !p.o && !p.g.optional)) return null;
+    let unit;
+    if (item.prices) {
+      unit = item.prices[picks.filter(p => !p.g.optional).map(p => p.o.id).join('/')];
+      if (unit == null) return null;
+    } else {
+      unit = (item.price || 0) + picks.reduce((s, p) => s + ((p.o && p.o.price) || 0), 0);
     }
-    const chosen = item.groups.map(g => g.options.find(o => o.id === (line.sel || {})[g.id]));
-    if (chosen.some(o => !o)) return null;
-    const base = item.prices[chosen.map(o => o.id).join('/')];
-    if (base == null) return null;
     const addons = (line.addons || []).map(id => (item.addons || []).find(a => a.id === id)).filter(Boolean);
-    const unit = base + addons.reduce((s, a) => s + a.price, 0);
+    unit += addons.reduce((s, a) => s + a.price, 0);
+    const main = picks.filter(p => !p.g.optional).map(p => p.o.line);
+    const extra = picks.filter(p => p.g.optional && p.o).map(p => p.o.line).concat(addons.map(a => '+ ' + a.line));
     return {
-      key: lineKey(line),
-      title: item.name + ' ' + chosen.map(o => o.line).join(', '),
-      opts: addons.map(a => '+ ' + a.line).join(', '),
+      key: lineKey(line), id: item.id,
+      title: item.name + (main.length ? ' ' + main.join(', ') : ''),
+      opts: extra.join(', '),
+      pending: picks.filter(p => p.g.optional && !p.o).map(p => p.g),
       unit, qty, sum: unit * qty
     };
   }
@@ -82,13 +90,15 @@
   const cartCount = () => lines().reduce((s, l) => s + l.qty, 0);
   const cartTotal = () => lines().reduce((s, l) => s + l.sum, 0);
   const qtyOf = id => cart.filter(l => l.id === id).reduce((s, l) => s + l.qty, 0);
+  const specOf = s => ({ id: s.id, sel: Object.assign({}, s.sel), addons: (s.addons || []).slice() });
 
-  function addToCart(line, qty) {
-    const key = lineKey(line);
+  function addToCart(line, qty, opts) {
+    const spec = specOf(line), key = lineKey(spec);
     const found = cart.find(l => lineKey(l) === key);
     if (found) found.qty = Math.min(99, found.qty + qty);
-    else cart.push(Object.assign({}, line, { qty }));
+    else cart.push(Object.assign(spec, { qty }));
     commit(true);
+    if (!(opts && opts.silent)) afterAdd(spec);
   }
   function setQty(key, qty) {
     const found = cart.find(l => lineKey(l) === key);
@@ -97,10 +107,114 @@
     else found.qty = Math.min(99, qty);
     commit(false);
   }
+  function decLast(id) {
+    for (let i = cart.length - 1; i >= 0; i--) {
+      if (cart[i].id !== id) continue;
+      cart[i].qty -= 1;
+      if (cart[i].qty <= 0) cart.splice(i, 1);
+      break;
+    }
+    commit(false);
+  }
+  // Ответ на необязательный вопрос (соус к фри): переносим одну порцию или всю строку в вариант с ответом
+  function changeOption(key, groupId, optId, whole) {
+    const line = cart.find(l => lineKey(l) === key);
+    if (!line) return;
+    const moved = whole ? line.qty : 1;
+    const next = specOf(line);
+    next.sel[groupId] = optId;
+    line.qty -= moved;
+    if (line.qty <= 0) cart = cart.filter(l => l !== line);
+    const same = cart.find(l => lineKey(l) === lineKey(next));
+    if (same) same.qty = Math.min(99, same.qty + moved);
+    else cart.push(Object.assign(next, { qty: moved }));
+    commit(false);
+  }
   function commit(bump) {
     store.set('istanbul.cart.v1', cart);
     view = 'form';
     renderCart(bump);
+  }
+
+  // ─────────────────────── предложения к покупке ───────────────────────
+  // «Уже есть»: само блюдо, любая позиция из «одиночной» категории (напитки, соусы) или комбо, куда оно входит
+  function covered(id) {
+    const cat = CAT_OF[id], single = (CFG.upsellExclusive || []).includes(cat);
+    return cart.some(l => l.id === id || (single && CAT_OF[l.id] === cat) ||
+      (((ITEMS[l.id] || {}).covers) || []).some(c => c === id || c === cat));
+  }
+  function suggestion(s) {
+    const item = ITEMS[s.id], r = item && resolve(Object.assign({ qty: 1 }, specOf(s)));
+    return r ? { spec: specOf(s), label: s.label || r.title, price: r.unit, emoji: item.emoji || '🍽️' } : null;
+  }
+  const available = list => (list || []).filter(s => !covered(s.id)).map(suggestion).filter(Boolean);
+
+  const dismissed = new Set();      // что гость закрыл крестиком — больше не показываем в этот визит
+  let trayTimer, trayDismissKey = null;
+
+  function openTray(lead, title, chips, dismissKey) {
+    const tray = $('[data-tray]');
+    $('[data-tray-lead]').textContent = lead || '';
+    $('[data-tray-lead]').hidden = !lead;
+    $('[data-tray-title]').textContent = title;
+    $('[data-tray-chips]').replaceChildren.apply($('[data-tray-chips]'), chips);
+    trayDismissKey = dismissKey;
+    tray.hidden = false;
+    tray.classList.remove('is-in'); void tray.offsetWidth; tray.classList.add('is-in');
+    $('[data-toast]').classList.remove('is-on');
+    clearTimeout(trayTimer);
+    trayTimer = setTimeout(hideTray, 16000);
+  }
+  function hideTray() {
+    clearTimeout(trayTimer);
+    $('[data-tray]').hidden = true;
+  }
+
+  // 1) вопрос по только что добавленному блюду (бесплатный соус к фри)
+  function askTray(r, group, lead) {
+    openTray(lead, group.ask || group.title, group.options.map(o => el('button', {
+      type: 'button', class: 'chip' + (o.id === 'none' ? ' chip--muted' : ''), text: o.name,
+      onclick: () => {
+        changeOption(r.key, group.id, o.id, false);
+        if (!ruleTray(r.id, o.id === 'none' ? '' : '✓ ' + o.name + t(' — положим к заказу'))) {
+          hideTray();
+          toast(o.id === 'none' ? t('Хорошо, без соуса') : o.name + t(' — положим к заказу'));
+        }
+      }
+    })), 'ask:' + group.id);
+  }
+
+  // 2) правило из config.upsell: «к донеру — фри и напиток», «к наггетсам — соус»…
+  function ruleTray(itemId, lead) {
+    const rule = (CFG.upsell || []).find(u => u.after.includes(itemId) && !dismissed.has(u.id) && available(u.suggest).length);
+    if (!rule) return false;
+    openTray(lead, rule.title, available(rule.suggest).map(s => el('button', {
+      type: 'button', class: 'chip', 'aria-label': t('Добавить: ') + s.label + ', ' + money(s.price),
+      onclick: () => {
+        addToCart(s.spec, 1, { silent: true });
+        const r = resolve(Object.assign({ qty: 1 }, s.spec)), ask = r.pending[0];
+        if (ask && !dismissed.has('ask:' + ask.id)) return askTray(r, ask, '✓ ' + t('В корзине: ') + r.title);
+        if (!ruleTray(itemId, '✓ ' + t('В корзине: ') + s.label) && !ruleTray(s.spec.id, '✓ ' + t('В корзине: ') + s.label)) {
+          hideTray();
+          toast(t('В корзине: ') + s.label);
+        }
+      }
+    }, [
+      el('span', { class: 'chip__e', text: s.emoji, 'aria-hidden': 'true' }),
+      el('span', { text: s.label }),
+      el('b', { text: '+' + money(s.price) })
+    ])), rule.id);
+    return true;
+  }
+
+  function afterAdd(spec) {
+    const r = resolve(Object.assign({ qty: 1 }, spec));
+    if (!r || !$('[data-sheet]').hidden) return;
+    const lead = '✓ ' + t('В корзине: ') + r.title, ask = r.pending[0];
+    if (ask && !dismissed.has('ask:' + ask.id)) return askTray(r, ask, lead);
+    if (ruleTray(r.id, lead)) return;
+    hideTray();
+    toast(t('В корзине: ') + r.title);
   }
 
   // ─────────────────────────── рендер меню ───────────────────────────
@@ -112,30 +226,31 @@
     ]);
   }
 
+  // переключатель-кнопки для группы вариантов
+  function segControl(item, g, state, refresh, small) {
+    return el('div', { class: 'seg seg--' + g.options.length + (small ? ' seg--sm' : ''), role: 'radiogroup', 'aria-label': item.name + ': ' + g.title.toLowerCase() },
+      g.options.map((o, i) => el('label', {}, [
+        el('input', { type: 'radio', name: item.id + '-' + g.id, value: o.id, checked: i === 0, onchange: () => { state.sel[g.id] = o.id; refresh(); } }),
+        el('span', {}, [document.createTextNode(o.name)])
+      ])));
+  }
+
   function renderDoner(item, headingId) {
     const state = { sel: {}, addons: new Set(), qty: 1 };
     item.groups.forEach(g => { state.sel[g.id] = g.options[0].id; });
 
     const buy = el('button', { type: 'button', class: 'btn btn--red btn--lg' });
     const qtyBox = el('div', { class: 'doner__qty' });
-    const unit = () => item.prices[item.groups.map(g => state.sel[g.id]).join('/')] +
-      (item.addons || []).filter(a => state.addons.has(a.id)).reduce((s, a) => s + a.price, 0);
+    const spec = () => ({ id: item.id, sel: Object.assign({}, state.sel), addons: Array.from(state.addons) });
     const refresh = () => {
-      buy.textContent = t('В корзину · ') + money(unit() * state.qty);
+      buy.textContent = t('В корзину · ') + money(resolve(Object.assign({ qty: 1 }, spec())).unit * state.qty);
       qtyBox.replaceChildren(el('span', { text: 'Количество' }),
         stepper(state.qty, q => { state.qty = Math.max(1, Math.min(20, q)); refresh(); }, 'Сколько донеров'));
     };
 
     const groups = item.groups.map(g => el('div', { class: 'opt' }, [
-      el('div', { class: 'opt__t', text: g.title, id: 'opt-' + item.id + '-' + g.id }),
-      el('div', { class: 'seg seg--' + g.options.length, role: 'radiogroup', 'aria-labelledby': 'opt-' + item.id + '-' + g.id },
-        g.options.map((o, i) => {
-          const input = el('input', { type: 'radio', name: item.id + '-' + g.id, value: o.id, checked: i === 0,
-            onchange: () => { state.sel[g.id] = o.id; refresh(); } });
-          return el('label', {}, [input, el('span', {}, [
-            document.createTextNode(o.name)
-          ])]);
-        }))
+      el('div', { class: 'opt__t', text: g.title }),
+      segControl(item, g, state, refresh, false)
     ]));
 
     const addons = (item.addons || []).length ? el('div', { class: 'opt' }, [
@@ -149,9 +264,7 @@
     ]) : null;
 
     buy.addEventListener('click', () => {
-      const line = { id: item.id, sel: Object.assign({}, state.sel), addons: Array.from(state.addons) };
-      addToCart(line, state.qty);
-      toast(t('В корзине: ') + resolve(Object.assign({ qty: 1 }, line)).title);
+      addToCart(spec(), state.qty);
       state.qty = 1;
       refresh();
     });
@@ -169,6 +282,33 @@
   }
 
   const actionSlots = {};   // id блюда → контейнер с кнопкой «Добавить» / степпером
+  const countBadges = {};   // id напитка → «в корзине: N»
+
+  // компактная карточка с вариантами: напитки (вкус + объём)
+  function renderOptionCard(item) {
+    const state = { sel: {} };
+    item.groups.forEach(g => { state.sel[g.id] = g.options[0].id; });
+    const price = el('span', { class: 'card__price' });
+    const count = el('span', { class: 'card__count', hidden: true });
+    countBadges[item.id] = count;
+    const spec = () => ({ id: item.id, sel: Object.assign({}, state.sel), addons: [] });
+    const refresh = () => { price.textContent = money(resolve(Object.assign({ qty: 1 }, spec())).unit); };
+
+    const controls = item.groups.map(g => g.style === 'select'
+      ? el('select', { class: 'sel', 'aria-label': item.name + ': ' + g.title.toLowerCase(), onchange: e => { state.sel[g.id] = e.target.value; refresh(); } },
+        g.options.map(o => el('option', { value: o.id, text: o.name })))
+      : segControl(item, g, state, refresh, true));
+
+    refresh();
+    return el('article', { class: 'card card--opt' }, [
+      el('div', { class: 'card__e card__e--tone', text: item.emoji || '🥤', 'aria-hidden': 'true', style: item.tone ? '--tone:' + item.tone : null }),
+      el('div', { class: 'card__name' }, [document.createTextNode(item.name), count]),
+      el('div', { class: 'card__ctrl' }, controls),
+      el('div', { class: 'card__foot' }, [price,
+        el('button', { type: 'button', class: 'btn btn--red add', html: icon('plus') + t('Добавить'), 'aria-label': t('Добавить: ') + item.name,
+          onclick: () => addToCart(spec(), 1) })])
+    ]);
+  }
 
   function renderItem(item) {
     const slot = el('div', { class: 'card__act' });
@@ -194,12 +334,16 @@
 
   function renderActions() {
     Object.keys(actionSlots).forEach(id => {
-      const qty = qtyOf(id);
-      const item = ITEMS[id];
+      const qty = qtyOf(id), item = ITEMS[id];
       actionSlots[id].replaceChildren(qty > 0
-        ? stepper(qty, q => setQty(id, q), item.name + t(': количество'))
+        ? stepper(qty, q => (q > qty ? addToCart({ id }, 1) : decLast(id)), item.name + t(': количество'))
         : el('button', { type: 'button', class: 'btn btn--red add', html: icon('plus') + t('Добавить'), 'aria-label': t('Добавить: ') + item.name,
-          onclick: () => { addToCart({ id }, 1); toast(t('В корзине: ') + item.name); } }));
+          onclick: () => addToCart({ id }, 1) }));
+    });
+    Object.keys(countBadges).forEach(id => {
+      const qty = qtyOf(id);
+      countBadges[id].hidden = qty === 0;
+      countBadges[id].textContent = t('в корзине: ') + qty;
     });
   }
 
@@ -207,16 +351,17 @@
     const menu = $('[data-menu]'), cats = $('[data-cats]');
     CATS.forEach(cat => {
       cats.appendChild(el('a', { href: '#cat-' + cat.id, text: cat.title, 'data-cat': cat.id }));
-      const configurable = cat.items.filter(i => i.type === 'configurable');
-      const simple = cat.items.filter(i => i.type !== 'configurable');
-      const sharedHeading = cat.items.length === 1 && configurable.length === 1 && configurable[0].name === cat.title && !cat.note;
-      const cardsClass = 'cards' + (simple.some(i => i.includes) ? ' cards--combo' : ' cards--snacks');
+      const big = cat.items.filter(i => i.type === 'configurable');
+      const rest = cat.items.filter(i => i.type !== 'configurable');
+      const sharedHeading = cat.items.length === 1 && big.length === 1 && big[0].name === cat.title && !cat.note;
+      const kind = rest.some(i => i.type === 'options') ? 'opt' : rest.some(i => i.includes) ? 'combo' : 'snacks';
       menu.appendChild(el('section', { class: 'cat', id: 'cat-' + cat.id, 'aria-labelledby': 'cat-h-' + cat.id }, [
         sharedHeading ? null : el('div', { class: 'cat__head' }, [
           el('h3', { text: cat.title, id: 'cat-h-' + cat.id }),
           cat.note ? el('span', { class: 'cat__note', text: cat.note }) : null
         ])
-      ].concat(configurable.map(item => renderDoner(item, sharedHeading ? 'cat-h-' + cat.id : null)), simple.length ? [el('div', { class: cardsClass }, simple.map(renderItem))] : [])));
+      ].concat(big.map(item => renderDoner(item, sharedHeading ? 'cat-h-' + cat.id : null)), rest.length ? [el('div', { class: 'cards cards--' + kind },
+        rest.map(i => (i.type === 'options' ? renderOptionCard(i) : renderItem(i))))] : [])));
     });
     $('[data-menu-hint]').textContent = CFG.menuHint || '';
     $('[data-menu-hint]').hidden = !CFG.menuHint;
@@ -227,7 +372,13 @@
       const io = new IntersectionObserver(entries => {
         entries.forEach(en => {
           if (!en.isIntersecting) return;
-          links.forEach(a => a.classList.toggle('is-active', '#' + en.target.id === a.getAttribute('href')));
+          links.forEach(a => {
+            const on = '#' + en.target.id === a.getAttribute('href');
+            a.classList.toggle('is-active', on);
+            if (on && a.parentNode.scrollWidth > a.parentNode.clientWidth) {   // на телефоне лента категорий листается
+              a.parentNode.scrollTo({ left: a.offsetLeft - 16, behavior: 'smooth' });
+            }
+          });
         });
       }, { rootMargin: '-35% 0px -55% 0px' });
       $$('.cat').forEach(s => io.observe(s));
@@ -325,11 +476,33 @@
         el('div', { class: 'line__unit', text: money(l.unit) + t(' за шт.') })
       ]),
       el('div', { class: 'line__sum', text: money(l.sum) }),
+      // вопрос без ответа (соус к фри) — спрашиваем прямо в строке
+      l.pending.length ? el('div', { class: 'line__ask' }, [el('span', { text: l.pending[0].short || l.pending[0].title + ':' })].concat(
+        l.pending[0].options.map(o => el('button', { type: 'button', class: 'chip chip--sm' + (o.id === 'none' ? ' chip--muted' : ''), text: o.name,
+          onclick: () => changeOption(l.key, l.pending[0].id, o.id, true) })))) : null,
       el('div', { class: 'line__ctrl' }, [
         stepper(l.qty, q => setQty(l.key, q), l.title + t(': количество')),
         el('button', { type: 'button', class: 'line__del', html: icon('trash') + t('Убрать'), 'aria-label': t('Убрать: ') + l.title, onclick: () => setQty(l.key, 0) })
       ])
     ])));
+  }
+
+  // блок «Добавить к заказу?» в корзине
+  function renderCartSuggest() {
+    const box = $('[data-cart-suggest]');
+    const asking = lines().some(l => l.pending.length);      // пока не выбран бесплатный соус, платные не предлагаем
+    const list = available(CFG.cartSuggest).filter(s => !(asking && CAT_OF[s.spec.id] === 'sauces')).slice(0, 4);
+    box.hidden = !list.length;
+    if (!list.length) return;
+    box.replaceChildren(
+      el('div', { class: 'cs__t', text: 'Добавить к заказу?' }),
+      el('div', { class: 'cs__row' }, list.map(s => el('button', { type: 'button', class: 'cs__item', 'aria-label': t('Добавить: ') + s.label + ', ' + money(s.price),
+        onclick: () => { addToCart(s.spec, 1, { silent: true }); toast(t('В корзине: ') + s.label); } }, [
+        el('span', { class: 'cs__e', text: s.emoji, 'aria-hidden': 'true' }),
+        el('span', { class: 'cs__n', text: s.label }),
+        el('span', { class: 'cs__p', html: icon('plus') }, [document.createTextNode(money(s.price))])
+      ])))
+    );
   }
 
   function renderCart(bump) {
@@ -342,6 +515,7 @@
     $('[data-cartbar-count]').textContent = count + ' ' + plural(count, ['позиция', 'позиции', 'позиций']);
     $('[data-cartbar-total]').textContent = money(total);
     if (bump && count) { bar.classList.remove('is-bump'); void bar.offsetWidth; bar.classList.add('is-bump'); }
+    if (!count) hideTray();
     renderActions();
 
     const empty = count === 0;
@@ -350,12 +524,13 @@
     form.hidden = empty || view !== 'form';
     $('[data-sheet-foot]').hidden = empty || view !== 'form';
     $('[data-total]').textContent = money(total);
-    if (!form.hidden) { renderLines(); syncForm(); }
+    if (!form.hidden) { renderLines(); renderCartSuggest(); syncForm(); }
   }
 
   function openCart() {
     lastFocus = document.activeElement;
     view = 'form';
+    hideTray();
     $('[data-sheet]').hidden = false;
     document.body.classList.add('is-locked');
     $('#page').inert = true;
@@ -501,6 +676,10 @@
       closeCart();
       toast('Корзина очищена — можно оформить новый заказ');
     });
+    $('[data-tray-close]').addEventListener('click', () => {
+      if (trayDismissKey) dismissed.add(trayDismissKey);
+      hideTray();
+    });
   }
 
   // ───────────────────────────── отзывы ─────────────────────────────
@@ -606,6 +785,7 @@
         if (e.key === 'ArrowLeft') show(index - 1);
         if (e.key === 'ArrowRight') show(index + 1);
       } else if (!$('[data-sheet]').hidden && e.key === 'Escape') closeCart();
+      else if (!$('[data-tray]').hidden && e.key === 'Escape') hideTray();
     });
   }
 
@@ -629,7 +809,7 @@
       if (map.getAttribute('src') !== src) map.src = src;
     }
     const prices = [];
-    Object.values(ITEMS).forEach(i => { if (i.type === 'configurable') prices.push.apply(prices, Object.values(i.prices)); });
+    Object.values(ITEMS).forEach(i => { if (i.type === 'configurable' && i.prices) prices.push.apply(prices, Object.values(i.prices)); });
     if (prices.length) $$('[data-min-price]').forEach(n => { n.textContent = money(Math.min.apply(null, prices)); });
   }
 
