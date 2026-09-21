@@ -1,0 +1,99 @@
+<!doctype html>
+<!-- Обложка для превью ссылок (og:image), 1200×630. Вариант выбирается параметром: card.html?a | ?b | ?c
+     Рендер в картинку — brand/og/render.sh -->
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@500;600;700&family=Unbounded:wght@700;800&display=block" rel="stylesheet">
+<style>
+  :root { --navy: #141a4a; --navy-2: #0d1136; --red: #d81f26; --logo-red: #f80903; --yellow: #ffc629; }
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; background: var(--navy); }
+  body { font-family: 'Onest', sans-serif; color: #fff; -webkit-font-smoothing: antialiased; }
+  .card { position: relative; width: 1200px; height: 630px; overflow: hidden; display: none; }
+  body.a .card--a, body.b .card--b, body.c .card--c { display: block; }
+  .display { font-family: 'Unbounded', sans-serif; font-weight: 800; letter-spacing: -.01em; }
+  .logo { display: block; border-radius: 26px; border: 7px solid #fff; box-shadow: 0 26px 60px rgba(0, 0, 0, .45); transform: rotate(-3deg); }
+  .chips { display: flex; gap: 14px; }
+  .chip { display: inline-flex; align-items: center; gap: 10px; height: 58px; padding: 0 24px; border-radius: 999px; background: rgba(255, 255, 255, .13); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .22); font-weight: 700; font-size: 25px; white-space: nowrap; }
+  .chip svg { width: 26px; height: 26px; color: var(--yellow); }
+  .chip--wa { background: #25d366; color: #04260f; box-shadow: none; }
+  .chip--wa svg { color: #04260f; }
+
+  /* A — тёмно-синяя, всё по центру: логотип-наклейка, что готовим, как заказать */
+  .card--a { background: radial-gradient(760px 430px at 50% 34%, rgba(216, 31, 38, .62), transparent 70%), linear-gradient(180deg, var(--navy), var(--navy-2)); text-align: center; }
+  .card--a::before, .card--a::after { content: ''; position: absolute; border-radius: 50%; background: var(--yellow); opacity: .9; }
+  .card--a::before { width: 190px; height: 190px; left: -70px; bottom: -70px; }
+  .card--a::after { width: 120px; height: 120px; right: -40px; top: -40px; }
+  .card--a .logo { width: 400px; margin: 40px auto 0; }
+  .card--a .kicker { margin-top: 40px; font-size: 50px; line-height: 1; color: var(--yellow); }
+  .card--a .sub { margin-top: 16px; font-size: 27px; font-weight: 600; color: rgba(255, 255, 255, .92); }
+  .card--a .chips { justify-content: center; margin-top: 30px; }
+
+  /* B — фирменная красная: крупный логотип как на вывеске и упаковке */
+  .card--b { background: var(--logo-red); text-align: center; }
+  .card--b img { display: block; height: 470px; margin: 0 auto; }
+  .card--b .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 176px; background: linear-gradient(180deg, var(--navy), var(--navy-2)); display: grid; align-content: center; gap: 14px; }
+  .card--b .kicker { font-size: 42px; line-height: 1; color: var(--yellow); }
+  .card--b .sub { font-size: 26px; font-weight: 600; color: rgba(255, 255, 255, .92); }
+
+  /* C — слева бренд и текст, справа фото на фирменной бумаге */
+  .card--c { background: linear-gradient(180deg, var(--navy), var(--navy-2)); }
+  .card--c .photo { position: absolute; top: 0; right: 0; width: 600px; height: 630px; clip-path: polygon(17% 0, 100% 0, 100% 100%, 0 100%); }
+  .card--c .photo img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 56%; }
+  .card--c .photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, rgba(13, 17, 54, .85) 4%, rgba(13, 17, 54, 0) 38%); }
+  .card--c .edge { position: absolute; top: 0; right: 0; width: 612px; height: 630px; background: var(--yellow); clip-path: polygon(17% 0, 19.2% 0, 2.2% 100%, 0 100%); }
+  .card--c .left { position: absolute; left: 60px; top: 0; bottom: 0; width: 620px; display: grid; align-content: center; gap: 0; }
+  .card--c .glow { position: absolute; left: -120px; top: -80px; width: 700px; height: 520px; background: radial-gradient(closest-side, rgba(216, 31, 38, .55), transparent); }
+  .card--c .logo { width: 300px; border-width: 6px; border-radius: 22px; position: relative; }
+  .card--c h1 { position: relative; margin: 38px 0 0; font-size: 60px; line-height: 1.04; }
+  .card--c h1 em { font-style: normal; color: var(--yellow); }
+  .card--c .sub { position: relative; margin-top: 16px; font-size: 27px; font-weight: 600; color: rgba(255, 255, 255, .9); }
+  .card--c .chips { position: relative; margin-top: 30px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="star" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5l2.95 5.98 6.6.96-4.78 4.65 1.13 6.57L12 17.56l-5.9 3.1 1.13-6.57L2.45 9.44l6.6-.96z"/></symbol>
+  <symbol id="wa" viewBox="0 0 24 24"><path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></symbol>
+</svg>
+
+<!-- A -->
+<div class="card card--a">
+  <img class="logo" src="../logo-original.png" alt="">
+  <div class="kicker display">ДОНЕР · КОМБО · ФРИ</div>
+  <div class="sub">Хромтау · доставка и навынос · жеткізу және алып кету</div>
+  <div class="chips">
+    <span class="chip"><svg><use href="#star"/></svg>4.8 в 2ГИС</span>
+    <span class="chip">10:00–24:00</span>
+    <span class="chip chip--wa"><svg><use href="#wa"/></svg>Заказ в WhatsApp</span>
+  </div>
+</div>
+
+<!-- B -->
+<div class="card card--b">
+  <img src="../logo-original.png" alt="">
+  <div class="bar">
+    <div class="kicker display">ДОНЕР · КОМБО · ФРИ</div>
+    <div class="sub">Хромтау · ★ 4.8 в 2ГИС · 10:00–24:00 · заказ в WhatsApp</div>
+  </div>
+</div>
+
+<!-- C -->
+<div class="card card--c">
+  <div class="glow"></div>
+  <div class="photo"><img src="../../site/img/hero.jpg" alt=""></div>
+  <div class="edge"></div>
+  <div class="left">
+    <img class="logo" src="../logo-original.png" alt="">
+    <h1 class="display">Сочный донер<br><em>в Хромтау</em></h1>
+    <div class="sub">Доставка и навынос · 10:00–24:00</div>
+    <div class="chips">
+      <span class="chip"><svg><use href="#star"/></svg>4.8 в 2ГИС</span>
+      <span class="chip chip--wa"><svg><use href="#wa"/></svg>Заказ в WhatsApp</span>
+    </div>
+  </div>
+</div>
+
+<script>document.body.className = (location.search.slice(1) || 'a').toLowerCase();</script>
+</body>
+</html>
